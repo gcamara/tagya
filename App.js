@@ -6,6 +6,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, PermissionsAndroid, Platform, Pressable, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { BleManager, ScanMode } from 'react-native-ble-plx';
+import * as Updates from 'expo-updates';
+
+// Marca do código JS atual — bate o olho na faixa pra saber qual versão está rodando.
+const DIAG_TAG = 'v4-scanfix';
+function codeSource() {
+  try {
+    if (Updates.isEmbeddedLaunch) return 'EMBUTIDO (build)';
+    return 'OTA ' + String(Updates.updateId || '?').slice(0, 8);
+  } catch { return 'updates n/d'; }
+}
 
 const EDITOR_URL = 'https://tagya.netlify.app';
 // Cache-bust por inicialização: o WKWebView preserva o NSURLCache entre updates do
@@ -223,6 +233,18 @@ export default function App() {
     } catch (e) { setDiag('❌ Scan lançou: ' + String(e.message || e)); }
   }, []);
 
+  // Auto-aplica updates OTA no launch: busca, baixa e recarrega com o código novo —
+  // sem depender de o usuário fechar/reabrir várias vezes. Recarrega só 1x (depois já
+  // está na última versão, então checkForUpdate não acha nada novo → sem loop).
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await Updates.checkForUpdateAsync();
+        if (r.isAvailable) { await Updates.fetchUpdateAsync(); await Updates.reloadAsync(); }
+      } catch { /* dev/sem updates: ignora */ }
+    })();
+  }, []);
+
   // Cria o BleManager já na montagem e dispara o self-test de diagnóstico.
   useEffect(() => {
     const m = getManager();
@@ -254,7 +276,7 @@ export default function App() {
       )}
       {showDiag && (
         <View style={styles.diag}>
-          <Text style={styles.diagTitle}>Diagnóstico BLE (nativo · build 8)</Text>
+          <Text style={styles.diagTitle}>Diag BLE · {DIAG_TAG} · {codeSource()}</Text>
           <Text style={styles.diagText}>{diag}</Text>
           <View style={styles.diagBtns}>
             <Pressable onPress={runBleSelfTest} style={styles.diagBtn}><Text style={styles.diagBtnText}>↻ Testar de novo</Text></Pressable>
