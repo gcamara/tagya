@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { subscribeChoice, pickDevice, cancelChoice, retryScan, openNativeSettings } from '../lib/niimbotBridge.js'
 
+// Marca de versão do seletor — confirma que o WebView carregou o site novo
+// (se NÃO aparecer no diálogo, o app está com cache antigo).
+const PICKER_BUILD = 'diag-2'
+
 // Estados do adaptador → texto amigável para diagnóstico.
 const STATE_LABEL = {
   PoweredOn: 'Bluetooth ligado', PoweredOff: 'Bluetooth desligado',
@@ -24,17 +28,17 @@ export default function BridgePicker() {
     <div className="overlay" style={{ zIndex: 200 }} onClick={cancelChoice}>
       <div className="modal" style={{ width: 'min(400px,92vw)' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h3>Selecione a impressora</h3>
+          <h3>Selecione a impressora <span style={{ fontSize: 10, fontWeight: 700, opacity: 0.5 }}>{PICKER_BUILD}</span></h3>
           <button className="btn icon" onClick={cancelChoice}>×</button>
         </div>
 
-        {state && (
-          <p className="hint" style={{ margin: '0 0 10px' }}>
-            {scanning && <span className="ble-spin" />}
-            Bluetooth: <b>{STATE_LABEL[state] || state}</b>
-            {!error && ` · ${devices.length} dispositivo(s)`}
-          </p>
-        )}
+        {/* Diagnóstico SEMPRE visível: estado do adaptador + nº de devices vistos + fase do scan. */}
+        <p className="hint" style={{ margin: '0 0 10px' }}>
+          {scanning && <span className="ble-spin" />}
+          Bluetooth: <b>{state ? (STATE_LABEL[state] || state) : 'verificando…'}</b>
+          {` · ${devices.length} visto(s)`}
+          {` · ${scanning ? 'procurando' : 'busca encerrada'}`}
+        </p>
 
         {error ? (
           <div className="banner" style={{ margin: '0 0 12px' }}>
