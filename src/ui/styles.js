@@ -90,6 +90,15 @@ body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;backgrou
 .iact:disabled{opacity:.35;cursor:not-allowed}
 .app.dark .iact{background:#2a2336}
 
+.align-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;width:108px}
+.align-cell{position:relative;aspect-ratio:1;border:1px solid var(--line);background:var(--panel);border-radius:7px;cursor:pointer;transition:.15s;padding:0}
+.align-cell:hover{border-color:var(--accent);background:var(--accent-soft)}
+.align-dot{position:absolute;width:7px;height:7px;border-radius:2px;background:var(--accent);opacity:.55}
+.align-dot.h-left{left:4px}.align-dot.h-center{left:50%;margin-left:-3.5px}.align-dot.h-right{right:4px}
+.align-dot.v-top{top:4px}.align-dot.v-middle{top:50%;margin-top:-3.5px}.align-dot.v-bottom{bottom:4px}
+.align-cell:hover .align-dot{opacity:1}
+.app.dark .align-cell{background:#2a2336}
+
 .icon-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .icon-opt{border:1px solid var(--line);border-radius:8px;padding:4px;cursor:pointer;background:#fff;display:grid;place-items:center}
 .icon-opt.sel{border-color:var(--accent);background:var(--accent-soft)}

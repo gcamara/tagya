@@ -11,7 +11,16 @@ const round = (v) => Math.round((Number(v) || 0) * 10) / 10
 const ELABEL = { text: 'Texto', rect: 'Retângulo', line: 'Linha', qr: 'QR Code', barcode: 'Cód. barras', icon: 'Ícone', ornament: 'Ornamento', image: 'Imagem' }
 
 // Painel de propriedades do elemento selecionado.
-export default function Inspector({ el, index = -1, count = 0, onUpdate, onRemove, onImageFile, onDuplicate, onReorder }) {
+const ALIGN_CELLS = [
+  ['left', 'top'], ['center', 'top'], ['right', 'top'],
+  ['left', 'middle'], ['center', 'middle'], ['right', 'middle'],
+  ['left', 'bottom'], ['center', 'bottom'], ['right', 'bottom']
+]
+const ALIGN_TITLE = {
+  left: 'esquerda', center: 'centro', right: 'direita', top: 'topo', middle: 'meio', bottom: 'base'
+}
+
+export default function Inspector({ el, index = -1, count = 0, onUpdate, onRemove, onImageFile, onDuplicate, onReorder, onAlign }) {
   if (!el) {
     return (
       <div className="inspector">
@@ -55,6 +64,19 @@ export default function Inspector({ el, index = -1, count = 0, onUpdate, onRemov
           <input type="number" title="Altura" value={round(el.h)} onChange={(e) => set({ h: Number(e.target.value) })} />
         </div>
       </div>
+
+      {onAlign && (
+        <div className="field">
+          <label>Alinhar na etiqueta</label>
+          <div className="align-grid">
+            {ALIGN_CELLS.map(([h, v]) => (
+              <button key={h + v} className="align-cell" title={`Alinhar: ${ALIGN_TITLE[h]} · ${ALIGN_TITLE[v]}`} onClick={() => onAlign(el.id, h, v)}>
+                <span className={`align-dot h-${h} v-${v}`} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {el.type === 'text' && (
         <div className="field">

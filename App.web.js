@@ -180,6 +180,16 @@ export default function App() {
     next.splice(j, 0, moved)
     setTemplate((t) => ({ ...t, elements: next }))
   }
+  // Alinha o elemento na etiqueta. h: left|center|right, v: top|middle|bottom.
+  function alignEl(id, h, v) {
+    const el = templateRef.current.elements.find((e) => e.id === id)
+    if (!el) return
+    pushHistory()
+    const W = templateRef.current.widthMm, H = templateRef.current.heightMm
+    const x = h === 'left' ? 0 : h === 'right' ? Math.max(0, W - el.w) : (W - el.w) / 2
+    const y = v === 'top' ? 0 : v === 'bottom' ? Math.max(0, H - el.h) : (H - el.h) / 2
+    updateEl(id, { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 })
+  }
   // Move o elemento selecionado pelas setas do teclado (mm).
   function nudgeEl(id, dx, dy) {
     const el = templateRef.current.elements.find((e) => e.id === id)
@@ -294,7 +304,7 @@ export default function App() {
   )
 
   const stage = <Stage template={template} scale={scale} selId={selId} onSelect={setSelId} onChange={updateEl} onBeginChange={() => pushHistory()} />
-  const inspector = <Inspector el={sel} index={template.elements.findIndex((e) => e.id === selId)} count={template.elements.length} onUpdate={editEl} onRemove={removeEl} onImageFile={onImageFile} onDuplicate={duplicateEl} onReorder={reorderEl} />
+  const inspector = <Inspector el={sel} index={template.elements.findIndex((e) => e.id === selId)} count={template.elements.length} onUpdate={editEl} onRemove={removeEl} onImageFile={onImageFile} onDuplicate={duplicateEl} onReorder={reorderEl} onAlign={alignEl} />
 
   const NAV = [
     { id: 'tools', Icon: Shapes, label: 'Elementos', onClick: () => setMobileTab('tools') },
