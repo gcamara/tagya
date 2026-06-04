@@ -63,6 +63,7 @@ export default function App() {
   useEffect(() => { templateRef.current = template })
   const pastRef = useRef([])
   const futureRef = useRef([])
+  const clipboardRef = useRef(null)
   const coalesceRef = useRef({ t: 0, tag: null })
   const [histTick, setHistTick] = useState(0)
   const canUndo = pastRef.current.length > 0
@@ -125,6 +126,8 @@ export default function App() {
       if (typing) return
 
       if (mod && (e.key === 'd' || e.key === 'D')) { if (selId) { e.preventDefault(); duplicateEl(selId) } return }
+      if (mod && (e.key === 'c' || e.key === 'C')) { if (selId) { e.preventDefault(); copyEl(selId) } return }
+      if (mod && (e.key === 'v' || e.key === 'V')) { e.preventDefault(); pasteEl(); return }
       if ((e.key === 'Delete' || e.key === 'Backspace') && selId) { e.preventDefault(); removeEl(selId); return }
       if (selId && e.key.startsWith('Arrow')) {
         e.preventDefault()
@@ -162,6 +165,25 @@ export default function App() {
     setTemplate((t) => ({ ...t, elements: [...t.elements, copy] }))
     setSelId(copy.id)
     flash('Elemento duplicado')
+  }
+  // Copia/cola elementos (mesmo entre etiquetas e sessões, via localStorage).
+  function copyEl(id) {
+    const src = templateRef.current.elements.find((e) => e.id === id)
+    if (!src) return
+    clipboardRef.current = clone(src)
+    try { localStorage.setItem('tagya_clip', JSON.stringify(src)) } catch { /* ok */ }
+    flash('Elemento copiado')
+  }
+  function pasteEl() {
+    let src = clipboardRef.current
+    if (!src) { try { src = JSON.parse(localStorage.getItem('tagya_clip') || 'null') } catch { src = null } }
+    if (!src) return
+    pushHistory()
+    const t = templateRef.current
+    const el = { ...clone(src), id: uid(), x: clamp((src.x || 0) + 2, 0, Math.max(0, t.widthMm - (src.w || 2))), y: clamp((src.y || 0) + 2, 0, Math.max(0, t.heightMm - (src.h || 2))) }
+    setTemplate((tt) => ({ ...tt, elements: [...tt.elements, el] }))
+    setSelId(el.id)
+    flash('Elemento colado')
   }
   // Reordena a camada do elemento. dir: 'front' | 'back' | 'up' | 'down'.
   function reorderEl(id, dir) {
