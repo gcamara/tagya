@@ -2,17 +2,30 @@ import { useEffect, useRef, useState } from 'react'
 import { renderTemplateToCanvas } from '../lib/labelTemplate.js'
 import { STARTER_TEMPLATES, STARTER_CATEGORIES } from '../lib/presets.js'
 
+// Thumbnail lazy: só renderiza no canvas quando o card entra na viewport
+// (suporta centenas de modelos sem travar ao abrir).
 function Thumb({ template }) {
   const ref = useRef(null)
+  const [show, setShow] = useState(false)
   useEffect(() => {
+    const el = ref.current
+    if (!el || typeof IntersectionObserver === 'undefined') { setShow(true); return }
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) { setShow(true); io.disconnect() }
+    }, { rootMargin: '120px' })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+  useEffect(() => {
+    if (!show) return
     const c = renderTemplateToCanvas(template, 4)
     const dst = ref.current
     if (!dst) return
     const maxW = 130, scale = Math.min(1, maxW / c.width)
     dst.width = c.width * scale; dst.height = c.height * scale
     dst.getContext('2d').drawImage(c, 0, 0, dst.width, dst.height)
-  }, [template])
-  return <canvas ref={ref} />
+  }, [template, show])
+  return <canvas ref={ref} width={130} height={40} />
 }
 
 // Galeria de modelos prontos, organizada por categoria de uso.
