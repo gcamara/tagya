@@ -12,11 +12,12 @@ import TemplatesModal from './src/ui/TemplatesModal.js'
 import StarterModal from './src/ui/StarterModal.js'
 import BridgePicker from './src/ui/BridgePicker.js'
 import ConnectionBar from './src/ui/ConnectionBar.js'
+import BatchModal from './src/ui/BatchModal.js'
 import {
   Plus, Shapes, SlidersHorizontal, Save, Printer, MoreHorizontal,
   Type, QrCode, Barcode, Star, Square, Minus, ImageIcon,
   FilePlus2, Sparkles, FolderOpen, Download, Moon, Sun,
-  Undo2, Redo2, Calendar, Table
+  Undo2, Redo2, Calendar, Table, Rows
 } from './src/ui/icons.js'
 
 const uid = () => 'el_' + Math.random().toString(36).slice(2, 8)
@@ -43,6 +44,7 @@ export default function App() {
   const [showPrint, setShowPrint] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
   const [showStarters, setShowStarters] = useState(false)
+  const [showBatch, setShowBatch] = useState(false)
   const [saved, setSaved] = useState([])
   const [toast, setToast] = useState(null)
   const [dark, setDark] = useState(false)
@@ -372,6 +374,7 @@ export default function App() {
             <button className="btn ghost" onClick={newLabel}><FilePlus2 size={15} /> Novo</button>
             <button className="btn ghost" onClick={() => setShowStarters(true)}><Sparkles size={15} /> Prontos</button>
             <button className="btn ghost" onClick={() => setShowTemplates(true)}><FolderOpen size={15} /> Meus</button>
+            <button className="btn ghost" onClick={() => setShowBatch(true)}><Rows size={15} /> Lote</button>
             <button className="btn ghost" onClick={doExport}><Download size={15} /> PNG</button>
             <button className="btn ghost icon-only" onClick={toggleDark} title="Alternar tema claro/escuro">{dark ? <Sun size={16} /> : <Moon size={16} />}</button>
             <button className="btn" onClick={doSave}><Save size={15} /> Salvar</button>
@@ -420,6 +423,7 @@ export default function App() {
               <button className="btn" onClick={() => { newLabel(); setShowActions(false) }}><FilePlus2 size={17} /> Novo</button>
               <button className="btn" onClick={() => { setShowStarters(true); setShowActions(false) }}><Sparkles size={17} /> Prontos</button>
               <button className="btn" onClick={() => { setShowTemplates(true); setShowActions(false) }}><FolderOpen size={17} /> Meus</button>
+              <button className="btn" onClick={() => { setShowBatch(true); setShowActions(false) }}><Rows size={17} /> Lote</button>
               <button className="btn" onClick={() => { doExport(); setShowActions(false) }}><Download size={17} /> PNG</button>
               <button className="btn" onClick={() => { toggleDark(); setShowActions(false) }}>{dark ? <><Sun size={17} /> Tema claro</> : <><Moon size={17} /> Tema escuro</>}</button>
             </div>
@@ -430,6 +434,7 @@ export default function App() {
       <PrintModal open={showPrint} onClose={() => setShowPrint(false)} template={template} />
       <TemplatesModal open={showTemplates} onClose={() => setShowTemplates(false)} templates={saved} onLoad={loadTemplate} onDelete={removeTemplate} />
       <StarterModal open={showStarters} onClose={() => setShowStarters(false)} onPick={loadStarter} />
+      <BatchModal open={showBatch} onClose={() => setShowBatch(false)} template={template} />
       <BridgePicker />
 
       {toast && <div className="toast">{toast}</div>}

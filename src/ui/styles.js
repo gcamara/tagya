@@ -275,6 +275,17 @@ body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;backgrou
 .dev-group{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:800;margin:6px 0 -2px}
 .dev-printer{border-color:var(--accent)!important;background:var(--accent-soft)!important;color:var(--accent)!important;font-weight:700}
 
+/* ---- Impressão em lote (CSV) ---- */
+.ph-tags{display:flex;flex-wrap:wrap;gap:6px}
+.ph-tag{font-family:ui-monospace,monospace;font-size:12px;font-weight:700;padding:3px 9px;border-radius:7px;border:1px solid var(--line)}
+.ph-tag.ok{background:#e3f6ec;color:#1f8a52;border-color:#bfe7cf}
+.ph-tag.miss{background:#fdecec;color:var(--danger);border-color:#f3c9c7}
+.app.dark .ph-tag.ok{background:#1c3a2a}.app.dark .ph-tag.miss{background:#3a1f1f}
+.batch-info{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;margin:6px 0 4px;font-size:13px}
+.batch-info>div:first-child{flex:1;min-width:180px}
+.batch-col{background:var(--accent-soft);color:var(--accent);padding:1px 7px;border-radius:6px;font-size:11.5px;margin:0 3px 3px 0;display:inline-block}
+.batch-preview{flex-shrink:0}
+
 /* ---- Cartões do diálogo de impressão ---- */
 .print-card{border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:12px;background:var(--panel)}
 .print-card-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:14px}

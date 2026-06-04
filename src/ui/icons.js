@@ -122,3 +122,7 @@ export const Table = make([
   ['path', { d: 'M12 3v18' }], ['path', { d: 'M3 9h18' }], ['path', { d: 'M3 15h18' }],
   ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2' }]
 ])
+export const Rows = make([
+  ['rect', { width: '18', height: '7', x: '3', y: '3', rx: '1' }],
+  ['rect', { width: '18', height: '7', x: '3', y: '14', rx: '1' }]
+])
