@@ -9,7 +9,7 @@ import { BleManager, ScanMode } from 'react-native-ble-plx';
 import * as Updates from 'expo-updates';
 
 // Marca do código JS atual — bate o olho na faixa pra saber qual versão está rodando.
-const DIAG_TAG = 'v4-scanfix';
+const DIAG_TAG = 'v5-printdiag';
 function codeSource() {
   try {
     if (Updates.isEmbeddedLaunch) return 'EMBUTIDO (build)';
@@ -112,11 +112,14 @@ export default function App() {
         // Ack imediato (antes de qualquer await): prova que o comando chegou ao nativo
         // e que o canal nativo→web funciona. Se isto não aparecer, o problema é o canal.
         toWeb({ ev: 'scanState', state: 'starting' });
+        setShowDiag(true); setDiag('🖨️ WebView pediu scan (impressão)…');
         const perm = await ensureAndroidPerms();
         if (perm !== 'granted') {
+          setDiag('🖨️ scan: permissão = ' + perm);
           return toWeb({ ev: 'error', message: 'Permissão de Bluetooth negada. Autorize o Bluetooth nas configurações do app.', needsSettings: perm === 'blocked' });
         }
         const st = await resolveBleState(m);
+        setDiag('🖨️ scan: BT = ' + st);
         toWeb({ ev: 'scanState', state: st });
         if (st !== 'PoweredOn') return toWeb({ ev: 'error', ...stateError(st) });
 
@@ -154,12 +157,13 @@ export default function App() {
         const scanOpts = { allowDuplicates: true };
         if (Platform.OS === 'android' && ScanMode) scanOpts.scanMode = ScanMode.LowLatency;
         m.startDeviceScan(null, scanOpts, (err, dev) => {
-          if (err) { m.stopDeviceScan(); return toWeb({ ev: 'error', message: String(err.message || err) }); }
+          if (err) { m.stopDeviceScan(); setDiag('🖨️ scan ERRO: ' + String(err.message || err)); return toWeb({ ev: 'error', message: String(err.message || err) }); }
           if (!dev || found[dev.id]) return;
           add(dev, !!(dev.name || dev.localName), isPrinter(dev));
+          setDiag('🖨️ scan→Web: ' + Object.keys(found).length + ' device(s)');
           report();
         });
-        setTimeout(() => { m.stopDeviceScan(); toWeb({ ev: 'scanEnd' }); }, 9000);
+        setTimeout(() => { m.stopDeviceScan(); setDiag('🖨️ scan fim: ' + Object.keys(found).length + ' device(s) enviados ao WebView'); toWeb({ ev: 'scanEnd' }); }, 9000);
       } else if (msg.cmd === 'connect') {
         m.stopDeviceScan();
         const dev = await m.connectToDevice(msg.id, { requestMTU: 200 }).catch(() => m.connectToDevice(msg.id));
