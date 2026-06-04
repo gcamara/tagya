@@ -89,3 +89,28 @@ export const Trash2 = make([
   ['path', { d: 'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6' }], ['path', { d: 'M3 6h18' }],
   ['path', { d: 'M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2' }]
 ])
+export const Undo2 = make([
+  ['path', { d: 'M9 14 4 9l5-5' }],
+  ['path', { d: 'M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11' }]
+])
+export const Redo2 = make([
+  ['path', { d: 'm15 14 5-5-5-5' }],
+  ['path', { d: 'M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13' }]
+])
+export const Copy = make([
+  ['rect', { width: '14', height: '14', x: '8', y: '8', rx: '2', ry: '2' }],
+  ['path', { d: 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2' }]
+])
+export const BringToFront = make([
+  ['rect', { x: '8', y: '8', width: '8', height: '8', rx: '2' }],
+  ['path', { d: 'M4 10a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2' }],
+  ['path', { d: 'M14 22a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2' }]
+])
+export const SendToBack = make([
+  ['rect', { x: '14', y: '14', width: '8', height: '8', rx: '2' }],
+  ['rect', { x: '2', y: '2', width: '8', height: '8', rx: '2' }],
+  ['path', { d: 'M7 14v1a2 2 0 0 0 2 2h1' }],
+  ['path', { d: 'M14 7h1a2 2 0 0 1 2 2v1' }]
+])
+export const ChevronUp = make([['path', { d: 'm18 15-6-6-6 6' }]])
+export const ChevronDown = make([['path', { d: 'm6 9 6 6 6-6' }]])

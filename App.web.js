@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { injectStyles } from './src/ui/styles.js'
 import { DEFAULT_TEMPLATE } from './src/lib/labelTemplate.js'
 import { SIZE_PRESETS } from './src/lib/sizes.js'
@@ -14,7 +14,8 @@ import BridgePicker from './src/ui/BridgePicker.js'
 import {
   Plus, Shapes, SlidersHorizontal, Save, Printer, MoreHorizontal,
   Type, QrCode, Barcode, Star, Square, Minus, ImageIcon,
-  FilePlus2, Sparkles, FolderOpen, Download, Moon, Sun
+  FilePlus2, Sparkles, FolderOpen, Download, Moon, Sun,
+  Undo2, Redo2
 } from './src/ui/icons.js'
 
 const uid = () => 'el_' + Math.random().toString(36).slice(2, 8)
@@ -55,6 +56,51 @@ export default function App() {
   }, [template.widthMm, vw])
   const sel = template.elements.find((e) => e.id === selId) || null
 
+  // ---- Histórico (desfazer/refazer) ----
+  // templateRef segue o template atual para que pushHistory tire o snapshot certo
+  // sem depender de closures defasados durante arraste/digitação.
+  const templateRef = useRef(template)
+  useEffect(() => { templateRef.current = template })
+  const pastRef = useRef([])
+  const futureRef = useRef([])
+  const coalesceRef = useRef({ t: 0, tag: null })
+  const [histTick, setHistTick] = useState(0)
+  const canUndo = pastRef.current.length > 0
+  const canRedo = futureRef.current.length > 0
+
+  // Empilha o estado atual no histórico antes de uma alteração.
+  // `tag` agrupa edições contínuas (arraste, digitação, nudge) num único passo
+  // se acontecerem em sequência rápida.
+  function pushHistory(tag) {
+    const now = Date.now()
+    const c = coalesceRef.current
+    if (tag && c.tag === tag && now - c.t < 700) { c.t = now; return }
+    coalesceRef.current = { t: now, tag: tag || null }
+    pastRef.current = [...pastRef.current, clone(templateRef.current)].slice(-80)
+    futureRef.current = []
+    setHistTick((n) => n + 1)
+  }
+  function undo() {
+    if (!pastRef.current.length) return
+    const prev = pastRef.current[pastRef.current.length - 1]
+    pastRef.current = pastRef.current.slice(0, -1)
+    futureRef.current = [clone(templateRef.current), ...futureRef.current].slice(0, 80)
+    coalesceRef.current = { t: 0, tag: null }
+    setTemplate(prev)
+    setSelId((id) => (prev.elements.some((e) => e.id === id) ? id : null))
+    setHistTick((n) => n + 1)
+  }
+  function redo() {
+    if (!futureRef.current.length) return
+    const next = futureRef.current[0]
+    futureRef.current = futureRef.current.slice(1)
+    pastRef.current = [...pastRef.current, clone(templateRef.current)].slice(-80)
+    coalesceRef.current = { t: 0, tag: null }
+    setTemplate(next)
+    setSelId((id) => (next.elements.some((e) => e.id === id) ? id : null))
+    setHistTick((n) => n + 1)
+  }
+
   useEffect(() => { setSaved(listTemplates()); setDark(!!loadPrefs().dark) }, [])
 
   useEffect(() => {
@@ -67,13 +113,27 @@ export default function App() {
     setDark((d) => { const v = !d; savePrefs({ ...loadPrefs(), dark: v }); return v })
   }
 
-  // Delete remove o elemento selecionado (exceto ao digitar em um campo).
+  // Atalhos de teclado. Em campos de texto só Ctrl+Z/Y funcionam (o resto é digitação).
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key !== 'Delete') return
       const tag = (document.activeElement?.tagName || '').toLowerCase()
-      if (['input', 'select', 'textarea'].includes(tag)) return
-      if (selId) { e.preventDefault(); removeEl(selId) }
+      const typing = ['input', 'select', 'textarea'].includes(tag)
+      const mod = e.ctrlKey || e.metaKey
+
+      if (mod && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); e.shiftKey ? redo() : undo(); return }
+      if (mod && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); redo(); return }
+      if (typing) return
+
+      if (mod && (e.key === 'd' || e.key === 'D')) { if (selId) { e.preventDefault(); duplicateEl(selId) } return }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selId) { e.preventDefault(); removeEl(selId); return }
+      if (selId && e.key.startsWith('Arrow')) {
+        e.preventDefault()
+        const step = e.shiftKey ? 5 : 1
+        if (e.key === 'ArrowLeft') nudgeEl(selId, -step, 0)
+        else if (e.key === 'ArrowRight') nudgeEl(selId, step, 0)
+        else if (e.key === 'ArrowUp') nudgeEl(selId, 0, -step)
+        else if (e.key === 'ArrowDown') nudgeEl(selId, 0, step)
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -84,11 +144,52 @@ export default function App() {
   function updateEl(id, patch) {
     setTemplate((t) => ({ ...t, elements: t.elements.map((e) => (e.id === id ? { ...e, ...patch } : e)) }))
   }
+  // Edição vinda do inspetor: agrupa digitação contínua no mesmo campo num passo de histórico.
+  function editEl(id, patch) {
+    pushHistory('edit-' + id + '-' + Object.keys(patch).join(','))
+    updateEl(id, patch)
+  }
   function removeEl(id) {
+    pushHistory()
     setTemplate((t) => ({ ...t, elements: t.elements.filter((e) => e.id !== id) }))
     setSelId(null)
   }
+  function duplicateEl(id) {
+    const src = templateRef.current.elements.find((e) => e.id === id)
+    if (!src) return
+    pushHistory()
+    const copy = { ...clone(src), id: uid(), x: clamp(src.x + 2, 0, templateRef.current.widthMm - src.w), y: clamp(src.y + 2, 0, templateRef.current.heightMm - src.h) }
+    setTemplate((t) => ({ ...t, elements: [...t.elements, copy] }))
+    setSelId(copy.id)
+    flash('Elemento duplicado')
+  }
+  // Reordena a camada do elemento. dir: 'front' | 'back' | 'up' | 'down'.
+  function reorderEl(id, dir) {
+    const els = templateRef.current.elements
+    const i = els.findIndex((e) => e.id === id)
+    if (i < 0) return
+    let j = i
+    if (dir === 'front') j = els.length - 1
+    else if (dir === 'back') j = 0
+    else if (dir === 'up') j = Math.min(els.length - 1, i + 1)
+    else if (dir === 'down') j = Math.max(0, i - 1)
+    if (j === i) return
+    pushHistory()
+    const next = els.slice()
+    const [moved] = next.splice(i, 1)
+    next.splice(j, 0, moved)
+    setTemplate((t) => ({ ...t, elements: next }))
+  }
+  // Move o elemento selecionado pelas setas do teclado (mm).
+  function nudgeEl(id, dx, dy) {
+    const el = templateRef.current.elements.find((e) => e.id === id)
+    if (!el) return
+    pushHistory('nudge')
+    const w = templateRef.current.widthMm, h = templateRef.current.heightMm
+    updateEl(id, { x: clamp(Math.round((el.x + dx) * 10) / 10, 0, w - el.w), y: clamp(Math.round((el.y + dy) * 10) / 10, 0, h - el.h) })
+  }
   function addEl(type) {
+    pushHistory()
     const base = { id: uid(), x: 2, y: 2, w: 16, h: 5 }
     let el
     if (type === 'text') el = { ...base, type, text: 'Texto', fontMm: 3, bold: false, align: 'left', font: 'Arial, Helvetica, sans-serif', w: 20, h: 5 }
@@ -107,17 +208,19 @@ export default function App() {
     const file = e.target.files && e.target.files[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => updateEl(id, { src: String(reader.result) })
+    reader.onload = () => { pushHistory(); updateEl(id, { src: String(reader.result) }) }
     reader.readAsDataURL(file)
   }
 
   function applySize(p) {
+    pushHistory('size')
     setTemplate((t) => ({ ...t, widthMm: p.widthMm, heightMm: p.heightMm }))
   }
 
-  function setName(name) { setTemplate((t) => ({ ...t, name })) }
+  function setName(name) { pushHistory('name'); setTemplate((t) => ({ ...t, name })) }
 
   function newLabel() {
+    pushHistory()
     setTemplate({ ...clone(DEFAULT_TEMPLATE), id: null, name: 'Nova etiqueta' })
     setSelId(null)
     flash('Nova etiqueta')
@@ -129,12 +232,14 @@ export default function App() {
     flash('Modelo salvo ✓')
   }
   function loadTemplate(t) {
+    pushHistory()
     setTemplate(clone(t))
     setSelId(null)
     setShowTemplates(false)
     flash('Modelo carregado')
   }
   function loadStarter(t) {
+    pushHistory()
     setTemplate({ ...clone(t), id: null })
     setSelId(null)
     setShowStarters(false)
@@ -178,18 +283,18 @@ export default function App() {
       <div className="row2">
         <div className="field" style={{ margin: 0 }}>
           <label>Largura</label>
-          <input type="number" min="8" value={template.widthMm} onChange={(e) => setTemplate((t) => ({ ...t, widthMm: Math.max(8, Number(e.target.value) || 8) }))} />
+          <input type="number" min="8" value={template.widthMm} onChange={(e) => { pushHistory('size'); setTemplate((t) => ({ ...t, widthMm: Math.max(8, Number(e.target.value) || 8) })) }} />
         </div>
         <div className="field" style={{ margin: 0 }}>
           <label>Altura</label>
-          <input type="number" min="8" value={template.heightMm} onChange={(e) => setTemplate((t) => ({ ...t, heightMm: Math.max(8, Number(e.target.value) || 8) }))} />
+          <input type="number" min="8" value={template.heightMm} onChange={(e) => { pushHistory('size'); setTemplate((t) => ({ ...t, heightMm: Math.max(8, Number(e.target.value) || 8) })) }} />
         </div>
       </div>
     </>
   )
 
-  const stage = <Stage template={template} scale={scale} selId={selId} onSelect={setSelId} onChange={updateEl} />
-  const inspector = <Inspector el={sel} onUpdate={updateEl} onRemove={removeEl} onImageFile={onImageFile} />
+  const stage = <Stage template={template} scale={scale} selId={selId} onSelect={setSelId} onChange={updateEl} onBeginChange={() => pushHistory()} />
+  const inspector = <Inspector el={sel} index={template.elements.findIndex((e) => e.id === selId)} count={template.elements.length} onUpdate={editEl} onRemove={removeEl} onImageFile={onImageFile} onDuplicate={duplicateEl} onReorder={reorderEl} />
 
   const NAV = [
     { id: 'tools', Icon: Shapes, label: 'Elementos', onClick: () => setMobileTab('tools') },
@@ -217,8 +322,16 @@ export default function App() {
           placeholder="Nome da etiqueta"
         />
         <div className="spacer" />
+        {isMobile && (
+          <div className="tb-mobile-hist">
+            <button className="btn ghost icon-only" onClick={undo} disabled={!canUndo} title="Desfazer"><Undo2 size={16} /></button>
+            <button className="btn ghost icon-only" onClick={redo} disabled={!canRedo} title="Refazer"><Redo2 size={16} /></button>
+          </div>
+        )}
         {!isMobile && (
           <div className="tb-actions">
+            <button className="btn ghost icon-only" onClick={undo} disabled={!canUndo} title="Desfazer (Ctrl+Z)"><Undo2 size={16} /></button>
+            <button className="btn ghost icon-only" onClick={redo} disabled={!canRedo} title="Refazer (Ctrl+Y)"><Redo2 size={16} /></button>
             <button className="btn ghost" onClick={newLabel}><FilePlus2 size={15} /> Novo</button>
             <button className="btn ghost" onClick={() => setShowStarters(true)}><Sparkles size={15} /> Prontos</button>
             <button className="btn ghost" onClick={() => setShowTemplates(true)}><FolderOpen size={15} /> Meus</button>

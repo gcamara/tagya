@@ -3,7 +3,7 @@ import { LIBRARIES, getLibrary, drawLibIcon, libIconCount } from '../lib/icons/i
 import { FONTS, DEFAULT_FONT } from '../lib/labelTemplate.js'
 import { ORNAMENT_CATEGORIES, ORNAMENT_COUNT, drawOrnament } from '../lib/ornaments.js'
 import { useIconLib } from './useIconLib.js'
-import { Trash2 } from './icons.js'
+import { Trash2, Copy, BringToFront, SendToBack, ChevronUp, ChevronDown } from './icons.js'
 import AllIconsModal from './AllIconsModal.js'
 import AllOrnamentsModal from './AllOrnamentsModal.js'
 
@@ -11,7 +11,7 @@ const round = (v) => Math.round((Number(v) || 0) * 10) / 10
 const ELABEL = { text: 'Texto', rect: 'Retângulo', line: 'Linha', qr: 'QR Code', barcode: 'Cód. barras', icon: 'Ícone', ornament: 'Ornamento', image: 'Imagem' }
 
 // Painel de propriedades do elemento selecionado.
-export default function Inspector({ el, onUpdate, onRemove, onImageFile }) {
+export default function Inspector({ el, index = -1, count = 0, onUpdate, onRemove, onImageFile, onDuplicate, onReorder }) {
   if (!el) {
     return (
       <div className="inspector">
@@ -29,6 +29,22 @@ export default function Inspector({ el, onUpdate, onRemove, onImageFile }) {
         <h3 style={{ margin: 0 }}>{ELABEL[el.type] || el.type}</h3>
         <span className="tag">{el.type}</span>
       </div>
+
+      {(onDuplicate || onReorder) && (
+        <div className="ins-actions">
+          {onDuplicate && (
+            <button className="iact" title="Duplicar (Ctrl+D)" onClick={() => onDuplicate(el.id)}><Copy size={16} /></button>
+          )}
+          {onReorder && (
+            <>
+              <button className="iact" title="Trazer para frente" disabled={index >= count - 1} onClick={() => onReorder(el.id, 'front')}><BringToFront size={16} /></button>
+              <button className="iact" title="Avançar uma camada" disabled={index >= count - 1} onClick={() => onReorder(el.id, 'up')}><ChevronUp size={16} /></button>
+              <button className="iact" title="Recuar uma camada" disabled={index <= 0} onClick={() => onReorder(el.id, 'down')}><ChevronDown size={16} /></button>
+              <button className="iact" title="Enviar para trás" disabled={index <= 0} onClick={() => onReorder(el.id, 'back')}><SendToBack size={16} /></button>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="field">
         <label>Posição e tamanho (mm)</label>
