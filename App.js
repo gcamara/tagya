@@ -8,6 +8,10 @@ import { WebView } from 'react-native-webview';
 import { BleManager, ScanMode } from 'react-native-ble-plx';
 
 const EDITOR_URL = 'https://tagya.netlify.app';
+// Cache-bust por inicialização: o WKWebView preserva o NSURLCache entre updates do
+// TestFlight e pode servir um index.html velho. Um parâmetro único por launch força
+// o WebView a buscar o HTML novo (o JS é hasheado, então continua cacheado por URL).
+const EDITOR_URL_FRESH = EDITOR_URL + '?cb=' + Date.now();
 
 // Serviço GATT das impressoras Niimbot (mesmo que a niimbluelib usa no Web Bluetooth).
 // Usado para destacar/priorizar a impressora na lista de dispositivos.
@@ -187,7 +191,7 @@ export default function App() {
       <StatusBar barStyle="light-content" backgroundColor="#7c4dff" />
       <WebView
         ref={webRef}
-        source={{ uri: EDITOR_URL }}
+        source={{ uri: EDITOR_URL_FRESH }}
         originWhitelist={['*']}
         javaScriptEnabled
         domStorageEnabled
