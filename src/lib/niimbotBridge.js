@@ -39,6 +39,8 @@ const notify = () => choiceSubs.forEach((f) => f(pending))
 export function subscribeChoice(cb) { choiceSubs.add(cb); cb(pending); return () => choiceSubs.delete(cb) }
 export function pickDevice(id) { if (pending) pending.onPick(id) }
 export function cancelChoice() { if (pending) pending.onCancel() }
+export function retryScan() { if (pending) pending.onRetry() }
+export function openNativeSettings() { if (window.TagYaNative) sendNative({ cmd: 'openSettings' }) }
 
 let BridgeClass = null
 
@@ -74,14 +76,25 @@ export function createBridgeClient(lib) {
       scanAndChoose() {
         return new Promise((resolve, reject) => {
           const found = {}
-          const cleanup = () => { off('devices'); off('error'); off('scanEnd'); pending = null; notify() }
+          const cleanup = () => { off('devices'); off('error'); off('scanEnd'); off('scanState'); pending = null; notify() }
+          // (Re)inicia o scan sem fechar o seletor — usado pelo botão "Tentar de novo".
+          const startScan = () => {
+            Object.keys(found).forEach((k) => delete found[k])
+            if (pending) { pending.devices = []; pending.done = false; pending.error = null; pending.state = null; notify() }
+            sendNative({ cmd: 'scan' })
+          }
+          on('scanState', (m) => { if (pending) { pending.state = m.state; notify() } })
           on('devices', (m) => { (m.devices || []).forEach((d) => { found[d.id] = d }); if (pending) { pending.devices = Object.values(found); notify() } })
-          on('error', (m) => { cleanup(); reject(new Error(m.message || 'Falha no Bluetooth')) })
+          // Erros acionáveis (Bluetooth desligado / sem permissão) NÃO cancelam: ficam
+          // no seletor com botão de ação, para o usuário resolver e tentar de novo.
+          on('error', (m) => { if (pending) { pending.error = { message: m.message || 'Falha no Bluetooth', needsSettings: !!m.needsSettings, needsEnable: !!m.needsEnable }; pending.done = true; notify() } })
           on('scanEnd', () => { if (pending) { pending.done = true; notify() } })
           pending = {
-            devices: [], done: false,
+            devices: [], done: false, error: null, state: null,
             onPick: (devId) => { cleanup(); resolve(devId) },
-            onCancel: () => { cleanup(); sendNative({ cmd: 'disconnect' }); reject(new Error('Conexão cancelada')) }
+            onCancel: () => { cleanup(); sendNative({ cmd: 'disconnect' }); reject(new Error('Conexão cancelada')) },
+            onRetry: startScan,
+            onOpenSettings: () => sendNative({ cmd: 'openSettings' })
           }
           notify()
           sendNative({ cmd: 'scan' })

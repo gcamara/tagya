@@ -243,6 +243,12 @@ body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;backgrou
 .font-name{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
 .app.dark .font-list{background:#2a2336}
 
+/* ---- Seletor de impressora (ponte nativa) ---- */
+.ble-spin{display:inline-block;width:11px;height:11px;margin-right:7px;vertical-align:-1px;border:2px solid var(--accent-soft);border-top-color:var(--accent);border-radius:50%;animation:bleSpin .7s linear infinite}
+@keyframes bleSpin{to{transform:rotate(360deg)}}
+.dev-group{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:800;margin:6px 0 -2px}
+.dev-printer{border-color:var(--accent)!important;background:var(--accent-soft)!important;color:var(--accent)!important;font-weight:700}
+
 /* ---- Cartões do diálogo de impressão ---- */
 .print-card{border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:12px;background:var(--panel)}
 .print-card-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:14px}
