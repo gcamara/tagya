@@ -78,6 +78,7 @@ function stateError(st) {
 export default function App() {
   const webRef = useRef(null);
   const conn = useRef({ device: null, service: null, char: null, sub: null });
+  const selfTestTimer = useRef(null);
   const [loading, setLoading] = useState(true);
   // Diagnóstico de BLE NATIVO (faixa no topo, fora do WebView — não depende de cache).
   const [diag, setDiag] = useState('BLE: testando…');
@@ -134,7 +135,13 @@ export default function App() {
           if (already.length) report();
         } catch { /* */ }
 
-        const scanOpts = { allowDuplicates: false };
+        // allowDuplicates:true re-reporta devices mesmo que outro scan (ex.: o self-test
+        // nativo) já os tenha visto — sem isso o iOS não devolve nada. Paramos qualquer
+        // scan anterior antes (e cancelamos o stop pendente do self-test, que senão
+        // mataria este scan no 6º segundo) pra garantir uma sessão de scan limpa.
+        if (selfTestTimer.current) { clearTimeout(selfTestTimer.current); selfTestTimer.current = null; }
+        try { m.stopDeviceScan(); } catch { /* */ }
+        const scanOpts = { allowDuplicates: true };
         if (Platform.OS === 'android' && ScanMode) scanOpts.scanMode = ScanMode.LowLatency;
         m.startDeviceScan(null, scanOpts, (err, dev) => {
           if (err) { m.stopDeviceScan(); return toWeb({ ev: 'error', message: String(err.message || err) }); }
@@ -205,7 +212,8 @@ export default function App() {
           setDiag('BLE ligado · ' + Object.keys(seen).length + ' visto(s)…');
         }
       });
-      setTimeout(() => {
+      selfTestTimer.current = setTimeout(() => {
+        selfTestTimer.current = null;
         try { mgr.stopDeviceScan(); } catch { /* */ }
         const n = Object.keys(seen).length;
         setDiag(n === 0
