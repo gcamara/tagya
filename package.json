@@ -1,18 +1,35 @@
 {
-  "name": "etiqya",
+  "name": "tagya",
   "version": "1.0.0",
   "main": "index.js",
   "dependencies": {
+    "@expo/metro-runtime": "~56.0.13",
+    "@mmote/niimbluelib": "^0.0.1-alpha.38",
     "expo": "~56.0.8",
+    "expo-dev-client": "~56.0.18",
     "expo-status-bar": "~56.0.4",
+    "jsbarcode": "^3.11.6",
+    "qrcode-generator": "^1.4.4",
     "react": "19.2.3",
-    "react-native": "0.85.3"
+    "react-dom": "19.2.3",
+    "react-native": "0.85.3",
+    "react-native-ble-plx": "^3.5.1",
+    "react-native-web": "^0.21.2",
+    "react-native-webview": "13.16.1"
   },
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web"
+  },
+  "expo": {
+    "autolinking": {
+      "exclude": [
+        "@capacitor/core",
+        "@capacitor-community/bluetooth-le"
+      ]
+    }
   },
   "private": true
 }
