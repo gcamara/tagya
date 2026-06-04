@@ -3,7 +3,7 @@ import { subscribeChoice, pickDevice, cancelChoice, retryScan, openNativeSetting
 
 // Marca de versão do seletor — confirma que o WebView carregou o site novo
 // (se NÃO aparecer no diálogo, o app está com cache antigo).
-const PICKER_BUILD = 'diag-3'
+const PICKER_BUILD = 'diag-4-rerender'
 
 // Estados do adaptador → texto amigável para diagnóstico.
 const STATE_LABEL = {

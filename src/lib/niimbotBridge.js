@@ -35,8 +35,12 @@ if (typeof window !== 'undefined') {
 // ---- escolha de dispositivo (a UI assina via subscribeChoice) ----
 let pending = null
 const choiceSubs = new Set()
-const notify = () => choiceSubs.forEach((f) => f(pending))
-export function subscribeChoice(cb) { choiceSubs.add(cb); cb(pending); return () => choiceSubs.delete(cb) }
+// IMPORTANTE: emitir um OBJETO NOVO a cada notify. O React (useState) faz bail-out
+// quando a referência é idêntica — se mutássemos `pending` e reenviássemos a mesma
+// referência, o seletor NÃO re-renderizaria (ficava congelado em "verificando…"/0).
+const snapshot = () => (pending ? { ...pending } : null)
+const notify = () => { const s = snapshot(); choiceSubs.forEach((f) => f(s)) }
+export function subscribeChoice(cb) { choiceSubs.add(cb); cb(snapshot()); return () => choiceSubs.delete(cb) }
 export function pickDevice(id) { if (pending) pending.onPick(id) }
 export function cancelChoice() { if (pending) pending.onCancel() }
 export function retryScan() { if (pending) pending.onRetry() }
