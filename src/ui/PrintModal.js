@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { printTemplateNiimbot, printTestNiimbot, bluetoothSupported } from '../lib/niimbot.js'
+import { useEffect, useState } from 'react'
+import { printTemplateNiimbot, printTestNiimbot, bluetoothSupported, subscribeConnection } from '../lib/niimbot.js'
 import { shareTemplatePNG, canShareImage } from '../lib/exportImage.js'
 
 // Modal de impressão: Bluetooth direto (quando disponível) + via app Niimbot (imagem).
@@ -12,8 +12,11 @@ export default function PrintModal({ open, onClose, template }) {
   const [phase, setPhase] = useState('config') // config | printing | done | error
   const [log, setLog] = useState([])
   const [shareMsg, setShareMsg] = useState(null)
+  const [conn, setConn] = useState({ status: 'disconnected', name: null })
+  useEffect(() => subscribeConnection(setConn), [])
 
   if (!open) return null
+  const connected = conn.status === 'connected'
   const supported = bluetoothSupported()
   const pushLog = (m) => setLog((p) => [...p, m])
 
@@ -98,7 +101,7 @@ export default function PrintModal({ open, onClose, template }) {
                 <div className="modal-actions" style={{ marginTop: 12 }}>
                   <button className="btn" onClick={() => run((o) => printTestNiimbot(o))} disabled={busy} title="1 etiqueta de teste p/ calibrar">🧪 Teste</button>
                   <button className="btn primary" onClick={() => run((o) => printTemplateNiimbot(template, o))} disabled={busy}>
-                    {busy ? 'Imprimindo…' : 'Conectar e imprimir'}
+                    {busy ? 'Imprimindo…' : connected ? `Imprimir em ${conn.name || 'Niimbot'}` : 'Conectar e imprimir'}
                   </button>
                 </div>
               </>

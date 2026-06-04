@@ -34,6 +34,27 @@ body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;backgrou
 .btn.danger:hover{background:#fdecec}
 .btn.icon{padding:6px 9px;border:none;background:transparent;font-size:16px}
 
+/* ---- Barra de conexão da impressora (topo) ---- */
+.conn-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 18px;
+  background:var(--panel);border-bottom:1px solid var(--line);font-size:13px;z-index:9}
+.conn-bar.on{background:linear-gradient(90deg,rgba(46,158,107,.10),transparent)}
+.conn-left{display:flex;align-items:center;gap:8px;color:var(--ink);min-width:0}
+.conn-left svg{color:var(--muted);flex-shrink:0}
+.conn-left b{font-weight:700}
+.conn-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;box-shadow:0 0 0 3px rgba(0,0,0,.04)}
+.conn-dot.ok{background:var(--ok);box-shadow:0 0 0 3px rgba(46,158,107,.18)}
+.conn-dot.off{background:#c7c2d2}
+.conn-dot.wait{background:#e0a73e;animation:connPulse 1s ease-in-out infinite}
+@keyframes connPulse{0%,100%{opacity:1}50%{opacity:.3}}
+.conn-btn{border:1px solid var(--accent);background:var(--accent);color:#fff;padding:6px 13px;border-radius:9px;
+  font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;transition:.15s}
+.conn-btn:hover:not(:disabled){background:#6b3df0}
+.conn-btn:disabled{opacity:.55;cursor:default}
+.conn-btn.ghost{background:transparent;color:var(--muted);border-color:var(--line)}
+.conn-btn.ghost:hover:not(:disabled){border-color:var(--danger);color:var(--danger);background:var(--panel)}
+.app.dark .conn-bar{background:#211c2b}
+.app.is-mobile .conn-bar{padding:7px 12px}
+
 .body{flex:1;display:grid;grid-template-columns:230px 1fr 290px;min-height:0}
 .rail,.inspector{background:var(--panel);overflow-y:auto;padding:14px}
 .rail{border-right:1px solid var(--line)}

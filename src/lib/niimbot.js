@@ -50,6 +50,45 @@ async function connectClient(printTask, onStatus) {
   return { client, lib, taskName, meta }
 }
 
+// ---- Conexão persistente ----
+// Mantém uma conexão viva com a impressora durante o uso do app (a niimbluelib tem
+// heartbeat, então a conexão fica viva). Assim não precisa escanear/escolher a cada
+// impressão. A UI assina via subscribeConnection e dispara connectPrinter/disconnectPrinter.
+let active = null // { client, lib, taskName, name }
+let connStatus = 'disconnected' // 'disconnected' | 'connecting' | 'connected'
+let connError = null
+const connSubs = new Set()
+const connSnap = () => ({ status: connStatus, name: active ? active.name : null, error: connError })
+const emitConn = () => { const s = connSnap(); connSubs.forEach((f) => f(s)) }
+
+export function subscribeConnection(cb) { connSubs.add(cb); cb(connSnap()); return () => connSubs.delete(cb) }
+export function connectionState() { return connSnap() }
+export function printerConnected() { return connStatus === 'connected' && !!active }
+
+function handleDrop() { if (!active) return; active = null; connStatus = 'disconnected'; emitConn() }
+
+export async function connectPrinter(opts = {}) {
+  const { printTask = 'auto', onStatus = () => {} } = opts
+  if (connStatus === 'connected' || connStatus === 'connecting') return connSnap()
+  connStatus = 'connecting'; connError = null; emitConn()
+  try {
+    const { client, lib, taskName, meta } = await connectClient(printTask, onStatus)
+    active = { client, lib, taskName, name: (meta && meta.model) ? meta.model : 'Niimbot' }
+    try { client.on('disconnect', handleDrop) } catch { /* */ }
+    connStatus = 'connected'; emitConn()
+  } catch (e) {
+    active = null; connStatus = 'disconnected'; connError = e.message || String(e); emitConn()
+    throw e
+  }
+  return connSnap()
+}
+
+export async function disconnectPrinter() {
+  const c = active && active.client
+  active = null; connStatus = 'disconnected'; connError = null; emitConn()
+  if (c) { try { await c.disconnect() } catch { /* */ } }
+}
+
 function labelTypeValue(lib, key) {
   const LT = lib.LabelType || {}
   const map = { gaps: LT.WithGaps, continuous: LT.Continuous, black: LT.BlackMarkGap, transparent: LT.Transparent }
@@ -59,7 +98,17 @@ function labelTypeValue(lib, key) {
 
 async function runPrint(canvases, opts, onStatus) {
   const { density = 3, direction = 'left', printTask = 'auto', labelType = 'gaps', copies = 1 } = opts
-  const { client, lib, taskName } = await connectClient(printTask, onStatus)
+
+  // Reusa a conexão persistente se houver; senão conecta só para esta impressão (efêmera).
+  let client, lib, taskName, ephemeral = false
+  if (printerConnected()) {
+    client = active.client; lib = active.lib
+    taskName = (printTask && printTask !== 'auto') ? printTask : active.taskName
+    onStatus(`Impressora conectada (${active.name}) · tarefa ${taskName}`)
+  } else {
+    ephemeral = true
+    ;({ client, lib, taskName } = await connectClient(printTask, onStatus))
+  }
 
   try {
     const pages = canvases.length * Math.max(1, copies)
@@ -91,7 +140,8 @@ async function runPrint(canvases, opts, onStatus) {
     await task.printEnd()
     onStatus(`Concluído: ${pages} etiqueta(s).`)
   } finally {
-    try { await client.disconnect() } catch { /* ignore */ }
+    // Só desconecta se a conexão foi efêmera; a persistente fica viva para o próximo print.
+    if (ephemeral) { try { await client.disconnect() } catch { /* ignore */ } }
   }
 }
 

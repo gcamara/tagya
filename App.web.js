@@ -11,6 +11,7 @@ import PrintModal from './src/ui/PrintModal.js'
 import TemplatesModal from './src/ui/TemplatesModal.js'
 import StarterModal from './src/ui/StarterModal.js'
 import BridgePicker from './src/ui/BridgePicker.js'
+import ConnectionBar from './src/ui/ConnectionBar.js'
 import {
   Plus, Shapes, SlidersHorizontal, Save, Printer, MoreHorizontal,
   Type, QrCode, Barcode, Star, Square, Minus, ImageIcon,
@@ -374,6 +375,8 @@ export default function App() {
           </div>
         )}
       </header>
+
+      <ConnectionBar onFlash={flash} />
 
       {!isMobile ? (
         <div className="body">
