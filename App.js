@@ -9,7 +9,7 @@ import { BleManager, ScanMode } from 'react-native-ble-plx';
 import * as Updates from 'expo-updates';
 
 // Marca do código JS atual — bate o olho na faixa pra saber qual versão está rodando.
-const DIAG_TAG = 'v5-printdiag';
+const DIAG_TAG = 'v6-recvprobe';
 function codeSource() {
   try {
     if (Updates.isEmbeddedLaunch) return 'EMBUTIDO (build)';
@@ -95,7 +95,11 @@ export default function App() {
   const [showDiag, setShowDiag] = useState(true);
 
   const toWeb = useCallback((obj) => {
-    const js = 'window.__tagyaNativeRecv && window.__tagyaNativeRecv(' + JSON.stringify(obj) + ');true;';
+    const payload = JSON.stringify(obj);
+    const evName = JSON.stringify(obj && obj.ev);
+    // Injeta o evento E pede confirmação de volta (sonda): se o WebView recebeu, ele
+    // posta {cmd:'__diag'} de volta pelo canal que funciona → mostramos na faixa nativa.
+    const js = '(function(){try{var ok=(typeof window.__tagyaNativeRecv==="function");if(ok){window.__tagyaNativeRecv(' + payload + ');}if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage(JSON.stringify({cmd:"__diag",ev:' + evName + ',recv:ok}));}}catch(e){try{window.ReactNativeWebView.postMessage(JSON.stringify({cmd:"__diag",ev:' + evName + ',err:String(e&&e.message||e)}));}catch(_){}}})();true;';
     webRef.current?.injectJavaScript(js);
   }, []);
 
@@ -199,7 +203,15 @@ export default function App() {
 
   const onMessage = useCallback((e) => {
     let msg; try { msg = JSON.parse(e.nativeEvent.data); } catch { return; }
-    if (msg && msg.cmd) handleCmd(msg);
+    if (!msg) return;
+    if (msg.cmd === '__diag') {
+      setShowDiag(true);
+      setDiag(msg.err
+        ? ('📥 WebView ERRO ao receber ' + msg.ev + ': ' + msg.err)
+        : ('📥 WebView recebeu "' + msg.ev + '" · __tagyaNativeRecv=' + msg.recv));
+      return;
+    }
+    if (msg.cmd) handleCmd(msg);
   }, [handleCmd]);
 
   // Teste de BLE 100% nativo: cria o manager, lê o estado e faz um scan de 6s, mostrando
