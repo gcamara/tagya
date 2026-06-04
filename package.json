@@ -6,6 +6,7 @@
     "@expo/metro-runtime": "~56.0.13",
     "@mmote/niimbluelib": "^0.0.1-alpha.38",
     "expo": "~56.0.8",
+    "expo-build-properties": "~56.0.16",
     "expo-dev-client": "~56.0.18",
     "expo-status-bar": "~56.0.4",
     "expo-updates": "~56.0.17",

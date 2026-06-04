@@ -12,7 +12,7 @@
       "url": "https://u.expo.dev/7f756abd-b664-4ede-83cc-e2af5da10c60"
     },
     "runtimeVersion": {
-      "policy": "fingerprint"
+      "policy": "appVersion"
     },
     "ios": {
       "supportsTablet": true,
@@ -59,6 +59,13 @@
             "central"
           ],
           "bluetoothAlwaysPermission": "O TagYa usa Bluetooth para conectar e imprimir na sua impressora Niimbot."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": { "newArchEnabled": false },
+          "android": { "newArchEnabled": false }
         }
       ]
     ],

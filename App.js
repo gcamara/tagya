@@ -3,7 +3,7 @@
 // WebView (o código web que já funciona); o nativo só faz scan/connect/write/notify.
 // A versão web (PWA) usa App.web.js — este arquivo não entra no bundle web.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, PermissionsAndroid, Platform, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, PermissionsAndroid, Platform, Pressable, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { BleManager, ScanMode } from 'react-native-ble-plx';
 
@@ -79,6 +79,9 @@ export default function App() {
   const webRef = useRef(null);
   const conn = useRef({ device: null, service: null, char: null, sub: null });
   const [loading, setLoading] = useState(true);
+  // Diagnóstico de BLE NATIVO (faixa no topo, fora do WebView — não depende de cache).
+  const [diag, setDiag] = useState('BLE: testando…');
+  const [showDiag, setShowDiag] = useState(true);
 
   const toWeb = useCallback((obj) => {
     const js = 'window.__tagyaNativeRecv && window.__tagyaNativeRecv(' + JSON.stringify(obj) + ');true;';
@@ -178,13 +181,47 @@ export default function App() {
     if (msg && msg.cmd) handleCmd(msg);
   }, [handleCmd]);
 
-  // Cria o BleManager já na montagem para o adaptador inicializar (e o iOS pedir a
-  // permissão) antes do primeiro scan — evita o estado 'Unknown' no momento de imprimir.
+  // Teste de BLE 100% nativo: cria o manager, lê o estado e faz um scan de 6s, mostrando
+  // o resultado na faixa nativa. Independe do WebView/cache — é a fonte da verdade.
+  const runBleSelfTest = useCallback(async () => {
+    setShowDiag(true);
+    setDiag('BLE: criando manager…');
+    let mgr;
+    try { mgr = getManager(); }
+    catch (e) { return setDiag('❌ Módulo BLE falhou ao criar: ' + String(e.message || e)); }
+    if (!mgr) return setDiag('❌ BleManager nulo (módulo nativo não linkado)');
+    setDiag('BLE: lendo estado do adaptador…');
+    let st = 'Unknown';
+    try { st = await resolveBleState(mgr); }
+    catch (e) { return setDiag('❌ Erro ao ler estado: ' + String(e.message || e)); }
+    if (st !== 'PoweredOn') return setDiag('BLE estado: ' + st + ' (precisa estar PoweredOn)');
+    setDiag('BLE ligado · escaneando 6s…');
+    const seen = {};
+    try {
+      mgr.startDeviceScan(null, { allowDuplicates: false }, (err, dev) => {
+        if (err) return setDiag('❌ Erro no scan: ' + String(err.message || err));
+        if (dev) {
+          seen[dev.id] = dev.name || dev.localName || ('?' + String(dev.id).slice(0, 5));
+          setDiag('BLE ligado · ' + Object.keys(seen).length + ' visto(s)…');
+        }
+      });
+      setTimeout(() => {
+        try { mgr.stopDeviceScan(); } catch { /* */ }
+        const n = Object.keys(seen).length;
+        setDiag(n === 0
+          ? '⚠️ BLE ligado, mas 0 dispositivos no scan (6s). Aproxime a D110 ligada.'
+          : '✅ BLE ' + n + ' visto(s): ' + Object.values(seen).slice(0, 5).join(', '));
+      }, 6000);
+    } catch (e) { setDiag('❌ Scan lançou: ' + String(e.message || e)); }
+  }, []);
+
+  // Cria o BleManager já na montagem e dispara o self-test de diagnóstico.
   useEffect(() => {
     const m = getManager();
     const sub = m.onStateChange(() => {}, true);
+    runBleSelfTest();
     return () => { try { sub.remove(); } catch { /* */ } try { m.destroy(); } catch { /* */ } bleManager = null; };
-  }, []);
+  }, [runBleSelfTest]);
 
   return (
     <View style={styles.fill}>
@@ -207,6 +244,16 @@ export default function App() {
           <ActivityIndicator color="#fff" style={{ marginTop: 16 }} />
         </View>
       )}
+      {showDiag && (
+        <View style={styles.diag}>
+          <Text style={styles.diagTitle}>Diagnóstico BLE (nativo · build 8)</Text>
+          <Text style={styles.diagText}>{diag}</Text>
+          <View style={styles.diagBtns}>
+            <Pressable onPress={runBleSelfTest} style={styles.diagBtn}><Text style={styles.diagBtnText}>↻ Testar de novo</Text></Pressable>
+            <Pressable onPress={() => setShowDiag(false)} style={styles.diagBtn}><Text style={styles.diagBtnText}>Fechar ✕</Text></Pressable>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -216,4 +263,10 @@ const styles = StyleSheet.create({
   loader: { ...StyleSheet.absoluteFillObject, backgroundColor: '#7c4dff', alignItems: 'center', justifyContent: 'center' },
   logo: { width: 72, height: 72, borderRadius: 20, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
   logoText: { color: '#7c4dff', fontSize: 30, fontWeight: '800', letterSpacing: -1 },
+  diag: { position: 'absolute', top: 58, left: 10, right: 10, backgroundColor: 'rgba(20,16,30,0.96)', borderRadius: 12, padding: 12, zIndex: 100 },
+  diagTitle: { color: '#b388ff', fontSize: 11, fontWeight: '800', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  diagText: { color: '#fff', fontSize: 14, lineHeight: 19, marginBottom: 10 },
+  diagBtns: { flexDirection: 'row', gap: 8 },
+  diagBtn: { backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 8, paddingVertical: 7, paddingHorizontal: 12 },
+  diagBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 });
