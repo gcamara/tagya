@@ -16,7 +16,7 @@ import {
   Plus, Shapes, SlidersHorizontal, Save, Printer, MoreHorizontal,
   Type, QrCode, Barcode, Star, Square, Minus, ImageIcon,
   FilePlus2, Sparkles, FolderOpen, Download, Moon, Sun,
-  Undo2, Redo2
+  Undo2, Redo2, Calendar, Table
 } from './src/ui/icons.js'
 
 const uid = () => 'el_' + Math.random().toString(36).slice(2, 8)
@@ -28,6 +28,8 @@ const ADD_ITEMS = [
   { type: 'qr', Icon: QrCode, label: 'QR Code' },
   { type: 'barcode', Icon: Barcode, label: 'Cód. barras' },
   { type: 'icon', Icon: Star, label: 'Ícone' },
+  { type: 'date', Icon: Calendar, label: 'Data' },
+  { type: 'table', Icon: Table, label: 'Tabela' },
   { type: 'rect', Icon: Square, label: 'Retângulo' },
   { type: 'line', Icon: Minus, label: 'Linha' },
   { type: 'ornament', Icon: Sparkles, label: 'Ornamento' },
@@ -229,6 +231,8 @@ export default function App() {
     else if (type === 'qr') el = { ...base, type, text: 'https://tagya.app', w: 9, h: 9 }
     else if (type === 'barcode') el = { ...base, type, text: '123456789', w: 28, h: 8 }
     else if (type === 'icon') el = { ...base, type, iconLib: 'etiqya', icon: 'star', w: 8, h: 8 }
+    else if (type === 'date') el = { ...base, type, dateMode: 'today', offsetDays: 0, fixedDate: '', fmt: 'dd/MM/yyyy', prefix: '', fontMm: 3, bold: false, align: 'left', font: 'Arial, Helvetica, sans-serif', w: 28, h: 5 }
+    else if (type === 'table') el = { ...base, type, rows: 2, cols: 2, cells: ['', '', '', ''], fontMm: 2.4, lineMm: 0.3, w: 36, h: 14 }
     else if (type === 'rect') el = { ...base, type, w: 20, h: 6, fill: false, lineMm: 0.4 }
     else if (type === 'line') el = { ...base, type, w: 24, h: 1, lineMm: 0.4 }
     else if (type === 'ornament') el = { ...base, type, ornament: 'div-diamond', w: 30, h: 7 }

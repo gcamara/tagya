@@ -105,6 +105,11 @@ body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;backgrou
 .ins-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .ins-head .tag{background:var(--accent-soft);color:var(--accent);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
 
+.tbl-grid{display:grid;gap:4px}
+.tbl-cell{width:100%;border:1px solid var(--line);border-radius:6px;padding:6px 6px;font-size:12px;font-family:inherit;background:#fff;color:var(--ink);min-width:0}
+.tbl-cell:focus{outline:none;border-color:var(--accent)}
+.app.dark .tbl-cell{background:#2a2336}
+
 .ins-actions{display:flex;gap:5px;margin-bottom:14px}
 .iact{flex:1;display:grid;place-items:center;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:9px;padding:8px 0;cursor:pointer;transition:.15s}
 .iact:hover:not(:disabled){border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { renderTemplateToCanvas, preloadTemplateImages } from '../lib/labelTemplate.js'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
-const ELABEL = { text: 'Texto', rect: 'Retângulo', line: 'Linha', qr: 'QR', barcode: 'Cód. barras', icon: 'Ícone', ornament: 'Ornamento', image: 'Imagem' }
+const ELABEL = { text: 'Texto', rect: 'Retângulo', line: 'Linha', qr: 'QR', barcode: 'Cód. barras', icon: 'Ícone', ornament: 'Ornamento', image: 'Imagem', date: 'Data', table: 'Tabela' }
 
 // Palco do editor: canvas + alças arrastáveis + guias de alinhamento (snap).
 export default function Stage({ template, scale, selId, onSelect, onChange }) {

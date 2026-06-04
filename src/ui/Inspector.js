@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { LIBRARIES, getLibrary, drawLibIcon, libIconCount } from '../lib/icons/index.js'
-import { FONTS, DEFAULT_FONT } from '../lib/labelTemplate.js'
+import { FONTS, DEFAULT_FONT, DATE_FORMATS } from '../lib/labelTemplate.js'
 import { ORNAMENT_CATEGORIES, ORNAMENT_COUNT, drawOrnament } from '../lib/ornaments.js'
 import { useIconLib } from './useIconLib.js'
 import { Trash2, Copy, BringToFront, SendToBack, ChevronUp, ChevronDown } from './icons.js'
@@ -8,7 +8,42 @@ import AllIconsModal from './AllIconsModal.js'
 import AllOrnamentsModal from './AllOrnamentsModal.js'
 
 const round = (v) => Math.round((Number(v) || 0) * 10) / 10
-const ELABEL = { text: 'Texto', rect: 'Retângulo', line: 'Linha', qr: 'QR Code', barcode: 'Cód. barras', icon: 'Ícone', ornament: 'Ornamento', image: 'Imagem' }
+const clamp = (v, a, b) => Math.max(a, Math.min(b, Number(v) || a))
+
+// Editor de tabela: dimensões + conteúdo de cada célula.
+function TableEditor({ el, set }) {
+  const rows = Math.max(1, el.rows || 1)
+  const cols = Math.max(1, el.cols || 1)
+  const cells = el.cells || []
+  const setDim = (nr, nc) => {
+    const next = []
+    for (let r = 0; r < nr; r++) for (let c = 0; c < nc; c++) next[r * nc + c] = (r < rows && c < cols) ? (cells[r * cols + c] || '') : ''
+    set({ rows: nr, cols: nc, cells: next })
+  }
+  const setCell = (i, v) => { const next = cells.slice(); next[i] = v; set({ cells: next }) }
+  return (
+    <>
+      <div className="row2">
+        <div className="field"><label>Linhas</label><input type="number" min="1" max="12" value={rows} onChange={(e) => setDim(clamp(e.target.value, 1, 12), cols)} /></div>
+        <div className="field"><label>Colunas</label><input type="number" min="1" max="8" value={cols} onChange={(e) => setDim(rows, clamp(e.target.value, 1, 8))} /></div>
+      </div>
+      <div className="row2">
+        <div className="field"><label>Fonte (mm)</label><input type="number" step="0.1" value={el.fontMm ?? 2.4} onChange={(e) => set({ fontMm: Number(e.target.value) })} /></div>
+        <div className="field"><label>Linha (mm)</label><input type="number" step="0.1" value={el.lineMm ?? 0.3} onChange={(e) => set({ lineMm: Number(e.target.value) })} /></div>
+      </div>
+      <label className="check"><input type="checkbox" checked={!!el.headerBold} onChange={(e) => set({ headerBold: e.target.checked })} /> 1ª linha em negrito</label>
+      <div className="field">
+        <label>Conteúdo das células</label>
+        <div className="tbl-grid" style={{ gridTemplateColumns: `repeat(${cols},1fr)` }}>
+          {Array.from({ length: rows * cols }).map((_, i) => (
+            <input key={i} className="tbl-cell" value={cells[i] || ''} onChange={(e) => setCell(i, e.target.value)} />
+          ))}
+        </div>
+      </div>
+    </>
+  )
+}
+const ELABEL = { text: 'Texto', rect: 'Retângulo', line: 'Linha', qr: 'QR Code', barcode: 'Cód. barras', icon: 'Ícone', ornament: 'Ornamento', image: 'Imagem', date: 'Data', table: 'Tabela' }
 
 // Painel de propriedades do elemento selecionado.
 const ALIGN_CELLS = [
@@ -92,11 +127,48 @@ export default function Inspector({ el, index = -1, count = 0, onUpdate, onRemov
         </div>
       )}
 
-      {el.type === 'text' && (
+      {el.type === 'date' && (
+        <>
+          <div className="field">
+            <label>Tipo de data</label>
+            <select value={el.dateMode || 'today'} onChange={(e) => set({ dateMode: e.target.value })}>
+              <option value="today">Hoje (data de impressão)</option>
+              <option value="offset">Validade (hoje + dias)</option>
+              <option value="fixed">Data fixa</option>
+            </select>
+          </div>
+          {el.dateMode === 'offset' && (
+            <div className="field">
+              <label>Dias de validade (+)</label>
+              <input type="number" value={el.offsetDays ?? 0} onChange={(e) => set({ offsetDays: Number(e.target.value) })} />
+            </div>
+          )}
+          {el.dateMode === 'fixed' && (
+            <div className="field">
+              <label>Data</label>
+              <input type="date" value={el.fixedDate || ''} onChange={(e) => set({ fixedDate: e.target.value })} />
+            </div>
+          )}
+          <div className="row2">
+            <div className="field">
+              <label>Formato</label>
+              <select value={el.fmt || 'dd/MM/yyyy'} onChange={(e) => set({ fmt: e.target.value })}>
+                {DATE_FORMATS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </select>
+            </div>
+            <div className="field">
+              <label>Prefixo</label>
+              <input type="text" placeholder="Val: " value={el.prefix || ''} onChange={(e) => set({ prefix: e.target.value })} />
+            </div>
+          </div>
+        </>
+      )}
+
+      {(el.type === 'text' || el.type === 'date') && (
         <>
           <div className="field">
             <label>Tipografia · {FONTS.length} fontes</label>
-            <FontPicker value={el.font || DEFAULT_FONT} text={el.text} onPick={(css) => set({ font: css })} />
+            <FontPicker value={el.font || DEFAULT_FONT} text={el.type === 'date' ? 'Data' : el.text} onPick={(css) => set({ font: css })} />
           </div>
           <div className="row2">
             <div className="field">
@@ -125,6 +197,8 @@ export default function Inspector({ el, index = -1, count = 0, onUpdate, onRemov
       {el.type === 'rect' && (
         <label className="check"><input type="checkbox" checked={!!el.fill} onChange={(e) => set({ fill: e.target.checked })} /> Preenchido (preto)</label>
       )}
+
+      {el.type === 'table' && <TableEditor el={el} set={set} />}
 
       {el.type === 'icon' && <IconPicker libId={el.iconLib || 'etiqya'} value={el.icon} onPick={(lib, k) => set({ iconLib: lib, icon: k })} />}
 

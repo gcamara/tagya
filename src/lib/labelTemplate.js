@@ -91,10 +91,44 @@ export const DEFAULT_TEMPLATE = {
   ]
 }
 
+// ---- Data dinâmica ----
+const MESES_PT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+export const DATE_FORMATS = [
+  { id: 'dd/MM/yyyy', label: '31/12/2026' },
+  { id: 'dd/MM/yy', label: '31/12/26' },
+  { id: 'dd/MM', label: '31/12' },
+  { id: 'yyyy-MM-dd', label: '2026-12-31' },
+  { id: 'dd MMM yyyy', label: '31 dez 2026' },
+  { id: 'dd/MM/yyyy HH:mm', label: '31/12/2026 14:30' },
+  { id: 'HH:mm', label: '14:30' }
+]
+const pad2 = (n) => String(n).padStart(2, '0')
+function formatDate(d, fmt) {
+  return (fmt || 'dd/MM/yyyy')
+    .replace('yyyy', d.getFullYear())
+    .replace('yy', pad2(d.getFullYear() % 100))
+    .replace('MMM', MESES_PT[d.getMonth()])
+    .replace('MM', pad2(d.getMonth() + 1))
+    .replace('dd', pad2(d.getDate()))
+    .replace('HH', pad2(d.getHours()))
+    .replace('mm', pad2(d.getMinutes()))
+}
+// Calcula a data do elemento: hoje, hoje + N dias (validade) ou data fixa.
+export function dateElValue(el) {
+  let d = new Date()
+  if (el.dateMode === 'offset') d = new Date(Date.now() + (Number(el.offsetDays) || 0) * 86400000)
+  else if (el.dateMode === 'fixed' && el.fixedDate) {
+    const fd = new Date(String(el.fixedDate) + 'T00:00:00')
+    if (!isNaN(fd.getTime())) d = fd
+  }
+  return (el.prefix || '') + formatDate(d, el.fmt)
+}
+
 // Conteúdo a renderizar para um elemento.
 function contentFor(el) {
   if (el.type === 'text') return el.text ?? ''
   if (el.type === 'qr' || el.type === 'barcode') return el.text ?? ''
+  if (el.type === 'date') return dateElValue(el)
   return ''
 }
 
@@ -138,7 +172,7 @@ export function renderTemplateToCanvas(template, pxPerMm = DPMM) {
       } else if (el.type === 'line') {
         ctx.lineWidth = Math.max(1, (el.lineMm || 0.4) * pxPerMm)
         ctx.beginPath(); ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); ctx.stroke()
-      } else if (el.type === 'text') {
+      } else if (el.type === 'text' || el.type === 'date') {
         drawText(ctx, contentFor(el), x, y, w, h, (el.fontMm || 3) * pxPerMm, el.bold, el.align || 'left', el.font)
       } else if (el.type === 'qr') {
         drawQR(ctx, contentFor(el), x, y, Math.min(w, h))
@@ -149,6 +183,8 @@ export function renderTemplateToCanvas(template, pxPerMm = DPMM) {
         drawLibIcon(ctx, el.iconLib || 'etiqya', el.icon || 'star', x + (w - sz) / 2, y + (h - sz) / 2, sz)
       } else if (el.type === 'ornament') {
         drawOrnament(ctx, el.ornament || 'div-diamond', x, y, w, h)
+      } else if (el.type === 'table') {
+        drawTable(ctx, el, x, y, w, h, pxPerMm)
       } else if (el.type === 'image' && el.src && imageCache.has(el.src)) {
         ctx.drawImage(imageCache.get(el.src), x, y, w, h)
       }
@@ -170,6 +206,34 @@ function drawText(ctx, text, x, y, w, h, fontPx, bold, align, family) {
   ctx.textAlign = align
   const tx = align === 'center' ? x + w / 2 : align === 'right' ? x + w : x
   ctx.fillText(t, tx, y + h / 2)
+  ctx.textAlign = 'left'
+}
+
+// Desenha uma tabela (grade + texto centralizado em cada célula). cells é row-major.
+function drawTable(ctx, el, x, y, w, h, pxPerMm) {
+  const rows = Math.max(1, Math.round(el.rows || 1))
+  const cols = Math.max(1, Math.round(el.cols || 1))
+  const lw = Math.max(1, (el.lineMm || 0.3) * pxPerMm)
+  ctx.lineWidth = lw; ctx.strokeStyle = '#000'; ctx.fillStyle = '#000'
+  ctx.strokeRect(x, y, w, h)
+  const cw = w / cols, ch = h / rows
+  for (let c = 1; c < cols; c++) { ctx.beginPath(); ctx.moveTo(x + c * cw, y); ctx.lineTo(x + c * cw, y + h); ctx.stroke() }
+  for (let r = 1; r < rows; r++) { ctx.beginPath(); ctx.moveTo(x, y + r * ch); ctx.lineTo(x + w, y + r * ch); ctx.stroke() }
+  const fontPx = Math.max(6, (el.fontMm || 2.4) * pxPerMm)
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'center'
+  const cells = el.cells || []
+  const pad = Math.min(cw, ch) * 0.14
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      let t = String(cells[r * cols + c] ?? '')
+      if (!t) continue
+      const bold = r === 0 && el.headerBold
+      ctx.font = `${bold ? 'bold ' : ''}${fontPx}px Arial, Helvetica, sans-serif`
+      const maxw = cw - pad * 2
+      if (ctx.measureText(t).width > maxw) { while (t.length > 1 && ctx.measureText(t + '…').width > maxw) t = t.slice(0, -1); t += '…' }
+      ctx.fillText(t, x + c * cw + cw / 2, y + r * ch + ch / 2)
+    }
+  }
   ctx.textAlign = 'left'
 }
 
