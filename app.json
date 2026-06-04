@@ -8,6 +8,12 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "primaryColor": "#7c4dff",
+    "updates": {
+      "url": "https://u.expo.dev/7f756abd-b664-4ede-83cc-e2af5da10c60"
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.gabriel.tagya",
