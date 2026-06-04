@@ -82,9 +82,18 @@ export default function App() {
   }, []);
 
   const handleCmd = useCallback(async (msg) => {
-    const m = getManager();
+    let m;
     try {
+      // getManager() DENTRO do try: se o módulo BLE nativo não estiver disponível
+      // (não linkado/incompatível), o erro vira um evento visível em vez de silêncio.
+      try { m = getManager(); }
+      catch (e) { return toWeb({ ev: 'error', message: 'Módulo Bluetooth nativo indisponível neste build: ' + String(e.message || e) }); }
+      if (!m) return toWeb({ ev: 'error', message: 'Bluetooth nativo não inicializou (BleManager nulo).' });
+
       if (msg.cmd === 'scan') {
+        // Ack imediato (antes de qualquer await): prova que o comando chegou ao nativo
+        // e que o canal nativo→web funciona. Se isto não aparecer, o problema é o canal.
+        toWeb({ ev: 'scanState', state: 'starting' });
         const perm = await ensureAndroidPerms();
         if (perm !== 'granted') {
           return toWeb({ ev: 'error', message: 'Permissão de Bluetooth negada. Autorize o Bluetooth nas configurações do app.', needsSettings: perm === 'blocked' });

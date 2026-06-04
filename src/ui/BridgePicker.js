@@ -3,10 +3,11 @@ import { subscribeChoice, pickDevice, cancelChoice, retryScan, openNativeSetting
 
 // Marca de versão do seletor — confirma que o WebView carregou o site novo
 // (se NÃO aparecer no diálogo, o app está com cache antigo).
-const PICKER_BUILD = 'diag-2'
+const PICKER_BUILD = 'diag-3'
 
 // Estados do adaptador → texto amigável para diagnóstico.
 const STATE_LABEL = {
+  starting: 'app nativo respondeu, lendo adaptador…',
   PoweredOn: 'Bluetooth ligado', PoweredOff: 'Bluetooth desligado',
   Unauthorized: 'sem permissão', Unsupported: 'não suportado',
   Resetting: 'reiniciando…', Unknown: 'inicializando…'

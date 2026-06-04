@@ -76,19 +76,35 @@ export function createBridgeClient(lib) {
       scanAndChoose() {
         return new Promise((resolve, reject) => {
           const found = {}
-          const cleanup = () => { off('devices'); off('error'); off('scanEnd'); off('scanState'); pending = null; notify() }
+          let watchdog = null
+          let responded = false
+          // Watchdog: se o nativo não mandar NADA (estado/devices/erro) em 10s, o módulo
+          // BLE nativo está mudo — avisa explicitamente em vez de "procurando" pra sempre.
+          const armWatchdog = () => {
+            if (watchdog) clearTimeout(watchdog)
+            responded = false
+            watchdog = setTimeout(() => {
+              if (!responded && pending) {
+                pending.error = { message: 'O app não recebeu nenhuma resposta do Bluetooth nativo (10s). O módulo BLE deste build não está respondendo — é preciso um novo build com a correção.', silent: true }
+                pending.done = true; notify()
+              }
+            }, 10000)
+          }
+          const gotResponse = () => { responded = true; if (watchdog) { clearTimeout(watchdog); watchdog = null } }
+          const cleanup = () => { if (watchdog) clearTimeout(watchdog); off('devices'); off('error'); off('scanEnd'); off('scanState'); pending = null; notify() }
           // (Re)inicia o scan sem fechar o seletor — usado pelo botão "Tentar de novo".
           const startScan = () => {
             Object.keys(found).forEach((k) => delete found[k])
             if (pending) { pending.devices = []; pending.done = false; pending.error = null; pending.state = null; notify() }
+            armWatchdog()
             sendNative({ cmd: 'scan' })
           }
-          on('scanState', (m) => { if (pending) { pending.state = m.state; notify() } })
-          on('devices', (m) => { (m.devices || []).forEach((d) => { found[d.id] = d }); if (pending) { pending.devices = Object.values(found); notify() } })
+          on('scanState', (m) => { gotResponse(); if (pending) { pending.state = m.state; notify() } })
+          on('devices', (m) => { gotResponse(); (m.devices || []).forEach((d) => { found[d.id] = d }); if (pending) { pending.devices = Object.values(found); notify() } })
           // Erros acionáveis (Bluetooth desligado / sem permissão) NÃO cancelam: ficam
           // no seletor com botão de ação, para o usuário resolver e tentar de novo.
-          on('error', (m) => { if (pending) { pending.error = { message: m.message || 'Falha no Bluetooth', needsSettings: !!m.needsSettings, needsEnable: !!m.needsEnable }; pending.done = true; notify() } })
-          on('scanEnd', () => { if (pending) { pending.done = true; notify() } })
+          on('error', (m) => { gotResponse(); if (pending) { pending.error = { message: m.message || 'Falha no Bluetooth', needsSettings: !!m.needsSettings, needsEnable: !!m.needsEnable }; pending.done = true; notify() } })
+          on('scanEnd', () => { gotResponse(); if (pending) { pending.done = true; notify() } })
           pending = {
             devices: [], done: false, error: null, state: null,
             onPick: (devId) => { cleanup(); resolve(devId) },
@@ -97,6 +113,7 @@ export function createBridgeClient(lib) {
             onOpenSettings: () => sendNative({ cmd: 'openSettings' })
           }
           notify()
+          armWatchdog()
           sendNative({ cmd: 'scan' })
         })
       }
