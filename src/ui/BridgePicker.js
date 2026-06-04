@@ -1,13 +1,9 @@
 import { useEffect, useState } from 'react'
 import { subscribeChoice, pickDevice, cancelChoice, retryScan, openNativeSettings } from '../lib/niimbotBridge.js'
 
-// Marca de versão do seletor — confirma que o WebView carregou o site novo
-// (se NÃO aparecer no diálogo, o app está com cache antigo).
-const PICKER_BUILD = 'diag-4-rerender'
-
-// Estados do adaptador → texto amigável para diagnóstico.
+// Estados do adaptador → texto amigável.
 const STATE_LABEL = {
-  starting: 'app nativo respondeu, lendo adaptador…',
+  starting: 'conectando…',
   PoweredOn: 'Bluetooth ligado', PoweredOff: 'Bluetooth desligado',
   Unauthorized: 'sem permissão', Unsupported: 'não suportado',
   Resetting: 'reiniciando…', Unknown: 'inicializando…'
@@ -29,7 +25,7 @@ export default function BridgePicker() {
     <div className="overlay" style={{ zIndex: 200 }} onClick={cancelChoice}>
       <div className="modal" style={{ width: 'min(400px,92vw)' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h3>Selecione a impressora <span style={{ fontSize: 10, fontWeight: 700, opacity: 0.5 }}>{PICKER_BUILD}</span></h3>
+          <h3>Selecione a impressora</h3>
           <button className="btn icon" onClick={cancelChoice}>×</button>
         </div>
 
