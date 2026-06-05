@@ -189,15 +189,86 @@ body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;backgrou
 .starter-info span{font-size:11px;color:var(--muted)}
 
 /* ---- Tema escuro (apenas a interface; a etiqueta continua P&B) ---- */
-.app.dark{--bg:#16131e;--panel:#211c2b;--ink:#ece8f4;--muted:#9d95ad;--line:#352d45;--accent-soft:#2c2440;--shadow:0 8px 30px rgba(0,0,0,.4)}
+.app.dark{--bg:#16131e;--panel:#211c2b;--ink:#f2edf8;--muted:#b4abc3;--line:#3a314a;--accent-soft:#302743;--shadow:0 8px 30px rgba(0,0,0,.4)}
+.app.dark .rail,
+.app.dark .inspector,
+.app.dark .modal,
+.app.dark .sheet,
+.app.dark .font-list,
+.app.dark .mobile-nav,
+.app.dark .conn-bar{background:var(--panel);color:var(--ink);border-color:var(--line)}
 .app.dark .btn{background:#2a2336;color:var(--ink);border-color:var(--line)}
 .app.dark .btn:hover{background:var(--accent-soft);border-color:var(--accent-2)}
 .app.dark .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.app.dark .size-opt,.app.dark .field input,.app.dark .field select,.app.dark .field textarea,.app.dark .icon-opt,.app.dark .tpl-card,.app.dark .starter-card,.app.dark .stage{background:#2a2336;color:var(--ink)}
-.app.dark .tpl-card canvas,.app.dark .starter-card canvas{background:#fff}
+.app.dark .btn.ghost{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.22);color:#fff}
+.app.dark .btn.ghost:hover{background:rgba(255,255,255,.18)}
+.app.dark .btn.icon{background:transparent;color:var(--muted)}
+.app.dark .btn.danger{background:#2a2336;color:#ff8c8c;border-color:#6d3a45}
+.app.dark .btn.danger:hover{background:#3a222c}
+.app.dark .add-btn,
+.app.dark .seg-btn,
+.app.dark .size-opt,
+.app.dark .ins-tab,
+.app.dark .iact,
+.app.dark .align-cell,
+.app.dark .rot-q,
+.app.dark .icon-opt,
+.app.dark .tpl-card,
+.app.dark .starter-card,
+.app.dark .lib-tab,
+.app.dark .font-opt,
+.app.dark .print-card{background:#2a2336;color:var(--ink);border-color:var(--line)}
+.app.dark .add-btn:hover,
+.app.dark .seg-btn:hover,
+.app.dark .size-opt:hover,
+.app.dark .ins-tab:hover,
+.app.dark .iact:hover:not(:disabled),
+.app.dark .align-cell:hover,
+.app.dark .rot-q:hover,
+.app.dark .icon-opt:hover,
+.app.dark .tpl-card:hover,
+.app.dark .starter-card:hover,
+.app.dark .lib-tab:hover,
+.app.dark .font-opt:hover{background:var(--accent-soft);border-color:var(--accent-2)}
+.app.dark .seg-btn.sel,
+.app.dark .size-opt.sel,
+.app.dark .icon-opt.sel,
+.app.dark .rot-q.sel,
+.app.dark .font-opt.sel,
+.app.dark .orn-opt.sel{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.app.dark .ins-tab.sel,
+.app.dark .lib-tab.sel{background:var(--accent);border-color:var(--accent);color:#fff}
+.app.dark .field input[type=text],
+.app.dark .field input[type=number],
+.app.dark .field select,
+.app.dark .field textarea,
+.app.dark .ai-search,
+.app.dark .tbl-cell{background:#2a2336;color:var(--ink);border-color:var(--line)}
+.app.dark .field input::placeholder,
+.app.dark .field textarea::placeholder,
+.app.dark .ai-search::placeholder{color:#8f849f}
+.app.dark .field label,
+.app.dark .check,
+.app.dark .empty,
+.app.dark .hint,
+.app.dark .modal .hint,
+.app.dark .stage-meta,
+.app.dark .tpl-card .info span,
+.app.dark .starter-info span,
+.app.dark .font-name,
+.app.dark .lib-tab span,
+.app.dark .size-opt .nt{color:var(--muted)}
+.app.dark .stage-meta b,
+.app.dark .conn-left,
+.app.dark .print-card strong{color:var(--ink)}
+.app.dark .tpl-card canvas,
+.app.dark .starter-card canvas,
+.app.dark .batch-preview canvas{background:#fff}
+.app.dark .stage{background:#2a2336}
 .app.dark .stage-wrap{background:#1b1726}
 .app.dark .banner{background:#2e2710;border-color:#5a4a14;color:#e8cd84}
 .app.dark .topbar input{background:#fff;color:#221b2e}
+.app.dark .ph-tag{border-color:var(--line)}
 
 /* ---- Nome da etiqueta (topbar) ---- */
 .name-input{margin-left:12px;border:none;border-radius:8px;padding:7px 12px;font-size:14px;font-weight:600;width:220px}
@@ -322,7 +393,8 @@ body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;backgrou
 .orn-opt canvas{width:100%;height:auto}
 .orn-opt:hover{border-color:var(--accent-2)}
 .orn-opt.sel{border-color:var(--accent);background:var(--accent-soft)}
-.app.dark .orn-opt{background:#fff}`
+.app.dark .orn-opt{background:#2a2336;color:var(--ink);border-color:var(--line)}
+.app.dark .orn-opt.sel{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}`
 
 export function injectStyles() {
   if (typeof document === 'undefined') return

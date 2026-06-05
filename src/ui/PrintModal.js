@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
 import { printTemplateNiimbot, printTestNiimbot, bluetoothSupported, subscribeConnection } from '../lib/niimbot.js'
-import { shareTemplatePNG, canShareImage } from '../lib/exportImage.js'
 import { savePrintRecord, listPrintRecords, clearPrintRecords } from '../lib/storage.js'
 
 function whenStr(iso) {
   try { const d = new Date(iso); return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) } catch { return '' }
 }
 
-// Modal de impressão: Bluetooth direto (quando disponível) + via app Niimbot (imagem).
+// Modal de impressão: Bluetooth direto quando disponível.
 export default function PrintModal({ open, onClose, template }) {
   const [density, setDensity] = useState(3)
   const [direction, setDirection] = useState('left')
@@ -16,7 +15,6 @@ export default function PrintModal({ open, onClose, template }) {
   const [copies, setCopies] = useState(1)
   const [phase, setPhase] = useState('config') // config | printing | done | error
   const [log, setLog] = useState([])
-  const [shareMsg, setShareMsg] = useState(null)
   const [conn, setConn] = useState({ status: 'disconnected', name: null })
   const [showHist, setShowHist] = useState(false)
   const [hist, setHist] = useState([])
@@ -42,38 +40,14 @@ export default function PrintModal({ open, onClose, template }) {
     } catch (e) { pushLog('⚠ ' + (e.message || String(e))); setPhase('error') }
   }
 
-  async function doShare() {
-    setShareMsg('Gerando imagem…')
-    try {
-      const r = await shareTemplatePNG(template)
-      setShareMsg(r === 'shared' ? '✓ Compartilhado — escolha o app Niimbot na lista.' : '✓ Imagem salva. Abra o app Niimbot e importe a imagem.')
-    } catch (e) { setShareMsg('⚠ ' + (e.message || String(e))) }
-  }
-
   const busy = phase === 'printing'
 
   return (
     <div className="overlay" onClick={busy ? undefined : onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h3>🖨 Imprimir <span className="exp-tag">beta</span></h3>
+          <h3>🖨 Imprimir</h3>
           <button className="btn icon" onClick={onClose}>×</button>
-        </div>
-
-        {/* Via app Niimbot (imagem) — único caminho no iPhone */}
-        <div className="print-card">
-          <div className="print-card-head">
-            <strong>📱 Pelo app Niimbot (imagem)</strong>
-            {!supported && <span className="exp-tag" style={{ background: '#e3f6ec', color: '#1f8a52' }}>recomendado aqui</span>}
-          </div>
-          <p className="hint" style={{ margin: '0 0 10px' }}>
-            Gera a etiqueta ({template.widthMm}×{template.heightMm} mm) como imagem e abre o compartilhamento — escolha o
-            app <b>Niimbot</b>, selecione o tamanho da etiqueta e imprima. Funciona no iPhone e em qualquer aparelho.
-          </p>
-          <button className="btn primary" style={{ width: '100%' }} onClick={doShare}>
-            {canShareImage() ? '📤 Enviar imagem para o app Niimbot' : '⬇ Salvar imagem (abra no app Niimbot)'}
-          </button>
-          {shareMsg && <p className="hint" style={{ margin: '8px 0 0' }}>{shareMsg}</p>}
         </div>
 
         {/* Bluetooth direto */}
