@@ -10,7 +10,7 @@ export const CSS = `
 *{box-sizing:border-box}
 html,body,#root{height:100%}
 body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink)}
-html.tagya-dark,body.tagya-dark{background:#0C0A14;color:#F3F1F8}
+html.tagya-dark,body.tagya-dark{background:#16131e;color:#F3F1F8}
 .app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
 
 .topbar{display:flex;align-items:center;gap:14px;padding:calc(10px + env(safe-area-inset-top)) 18px 10px;background:linear-gradient(95deg,#7c4dff,#b388ff);color:#fff;box-shadow:var(--shadow);z-index:10}
@@ -190,7 +190,7 @@ html.tagya-dark,body.tagya-dark{background:#0C0A14;color:#F3F1F8}
 .starter-info span{font-size:11px;color:var(--muted)}
 
 /* ---- Tema escuro (apenas a interface; a etiqueta continua P&B) ---- */
-.app.dark{--bg:#16131e;--panel:#211c2b;--ink:#f2edf8;--muted:#b4abc3;--line:#3a314a;--accent-soft:#302743;--shadow:0 8px 30px rgba(0,0,0,.4)}
+.app.dark{--bg:#16131e;--panel:#211c2b;--ink:#f2edf8;--muted:#b4abc3;--line:#3a314a;--accent-soft:#302743;--shadow:0 8px 30px rgba(0,0,0,.4);background:#16131e}
 .app.dark .rail,
 .app.dark .inspector,
 .app.dark .modal,
