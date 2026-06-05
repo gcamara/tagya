@@ -48,7 +48,10 @@ function IconBtn({ libId, icon, value, valueLib, onPick, onClose }) {
 export default function AllIconsModal({ open, libId, value, onPick, onClose }) {
   const [lib, setLib] = useState(libId || 'etiqya')
   const [q, setQ] = useState('')
+  const scrollRef = useRef(null)
   useEffect(() => { if (open) { setLib(libId || 'etiqya'); setQ('') } }, [open, libId])
+  // Volta o scroll ao topo ao trocar de biblioteca ou mudar a busca.
+  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0 }, [lib, q])
   if (!open) return null
 
   const query = q.trim().toLowerCase()
@@ -94,7 +97,7 @@ export default function AllIconsModal({ open, libId, value, onPick, onClose }) {
           </div>
         )}
 
-        <div className="ai-scroll">
+        <div className="ai-scroll" ref={scrollRef}>
           {searching ? (
             globalResults.length === 0
               ? <p className="hint">Nenhum ícone encontrado em nenhuma biblioteca.</p>
