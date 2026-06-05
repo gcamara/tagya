@@ -194,7 +194,7 @@ export async function preloadTemplateImages(template) {
   if (!hasDOM) return
   await ensureTemplateLibs(template)
   await ensureFontsLoaded(template)
-  const srcs = (template.elements || []).filter((e) => e.type === 'image' && e.src).map((e) => e.src)
+  const srcs = (template.elements || []).flatMap((e) => [e.type === 'image' && e.src, e.type === 'qr' && e.logoSrc]).filter(Boolean)
   await Promise.all(srcs.map((src) => new Promise((resolve) => {
     if (imageCache.has(src)) return resolve()
     const img = new Image()
@@ -214,6 +214,8 @@ export function renderTemplateToCanvas(template, pxPerMm = DPMM) {
   ctx.fillRect(0, 0, W, H)
   ctx.fillStyle = '#000'
   ctx.strokeStyle = '#000'
+  // Rótulo redondo: recorta o desenho na elipse inscrita (cantos ficam em branco).
+  if (template.shape === 'round') { ctx.beginPath(); ctx.ellipse(W / 2, H / 2, W / 2, H / 2, 0, 0, Math.PI * 2); ctx.clip() }
 
   for (const el of template.elements || []) {
     const x = (el.x || 0) * pxPerMm
@@ -231,9 +233,10 @@ export function renderTemplateToCanvas(template, pxPerMm = DPMM) {
         ctx.lineWidth = Math.max(1, (el.lineMm || 0.4) * pxPerMm)
         ctx.beginPath(); ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); ctx.stroke()
       } else if (el.type === 'text' || el.type === 'date') {
-        drawText(ctx, contentFor(el), x, y, w, h, (el.fontMm || 3) * pxPerMm, el.bold, el.align || 'left', el.font)
+        if (el.curve) drawCurvedText(ctx, contentFor(el), x, y, w, h, (el.fontMm || 3) * pxPerMm, el.bold, el.font, Number(el.curve))
+        else drawText(ctx, contentFor(el), x, y, w, h, (el.fontMm || 3) * pxPerMm, el.bold, el.align || 'left', el.font)
       } else if (el.type === 'qr') {
-        drawQR(ctx, contentFor(el), x, y, Math.min(w, h))
+        drawQR(ctx, contentFor(el), x, y, Math.min(w, h), el.qrEcc, (el.logoSrc && imageCache.has(el.logoSrc)) ? imageCache.get(el.logoSrc) : null)
       } else if (el.type === 'barcode') {
         drawBarcode(x, y, w, h, contentFor(el), ctx, el.barFormat, el.barText)
       } else if (el.type === 'icon') {
@@ -298,10 +301,41 @@ function drawTable(ctx, el, x, y, w, h, pxPerMm) {
   ctx.textAlign = 'left'
 }
 
-function drawQR(ctx, text, x, y, size) {
+// Texto em arco. curve = ângulo total do arco em graus (+ = arco pra cima/arco-íris).
+function drawCurvedText(ctx, text, x, y, w, h, fontPx, bold, family, curve) {
+  const chars = [...String(text ?? '')]
+  if (!chars.length) return
+  ctx.save()
+  ctx.fillStyle = '#000'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center'
+  ctx.font = `${bold ? 'bold ' : ''}${Math.max(6, fontPx)}px ${family || 'Arial, Helvetica, sans-serif'}`
+  const widths = chars.map((c) => ctx.measureText(c).width)
+  const total = widths.reduce((a, b) => a + b, 0)
+  const sweep = Math.max(1, Math.abs(curve)) * Math.PI / 180
+  const R = total / sweep
+  const up = curve >= 0
+  const cx = x + w / 2
+  const cy = up ? y + h / 2 + R : y + h / 2 - R
+  let ang = -sweep / 2
+  for (let i = 0; i < chars.length; i++) {
+    ang += (widths[i] / 2) / R
+    const px = cx + R * Math.sin(ang)
+    const py = up ? cy - R * Math.cos(ang) : cy + R * Math.cos(ang)
+    ctx.save()
+    ctx.translate(px, py)
+    ctx.rotate(up ? ang : -ang)
+    ctx.fillText(chars[i], 0, 0)
+    ctx.restore()
+    ang += (widths[i] / 2) / R
+  }
+  ctx.restore()
+}
+
+function drawQR(ctx, text, x, y, size, ecc, logoImg) {
   const content = String(text ?? '')
   if (!content || size < 2) return
-  const qr = qrcode(0, 'M')
+  // Com logo no centro, usa correção 'H' (máxima) p/ manter a leitura.
+  const ec = ['L', 'M', 'Q', 'H'].includes(ecc) ? ecc : (logoImg ? 'H' : 'M')
+  const qr = qrcode(0, logoImg && ec !== 'H' ? 'H' : ec)
   qr.addData(content)
   qr.make()
   const count = qr.getModuleCount()
@@ -311,6 +345,12 @@ function drawQR(ctx, text, x, y, size) {
     for (let c = 0; c < count; c++) {
       if (qr.isDark(r, c)) ctx.fillRect(x + c * cell, y + r * cell, Math.ceil(cell), Math.ceil(cell))
     }
+  }
+  if (logoImg) {
+    const ls = size * 0.26, lx = x + (size - ls) / 2, ly = y + (size - ls) / 2, pad = ls * 0.14
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(lx - pad, ly - pad, ls + pad * 2, ls + pad * 2)
+    try { ctx.drawImage(logoImg, lx, ly, ls, ls) } catch { /* */ }
   }
 }
 

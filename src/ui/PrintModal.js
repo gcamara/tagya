@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { printTemplateNiimbot, printTestNiimbot, bluetoothSupported, subscribeConnection } from '../lib/niimbot.js'
 import { shareTemplatePNG, canShareImage } from '../lib/exportImage.js'
+import { savePrintRecord, listPrintRecords, clearPrintRecords } from '../lib/storage.js'
+
+function whenStr(iso) {
+  try { const d = new Date(iso); return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) } catch { return '' }
+}
 
 // Modal de impressão: Bluetooth direto (quando disponível) + via app Niimbot (imagem).
 export default function PrintModal({ open, onClose, template }) {
@@ -13,7 +18,10 @@ export default function PrintModal({ open, onClose, template }) {
   const [log, setLog] = useState([])
   const [shareMsg, setShareMsg] = useState(null)
   const [conn, setConn] = useState({ status: 'disconnected', name: null })
+  const [showHist, setShowHist] = useState(false)
+  const [hist, setHist] = useState([])
   useEffect(() => subscribeConnection(setConn), [])
+  useEffect(() => { if (open) setHist(listPrintRecords()) }, [open])
 
   if (!open) return null
   const connected = conn.status === 'connected'
@@ -26,10 +34,12 @@ export default function PrintModal({ open, onClose, template }) {
     onStatus: pushLog
   })
 
-  async function run(fn) {
+  async function run(fn, isTest) {
     setPhase('printing'); setLog(['Iniciando…'])
-    try { await fn(opts()); setPhase('done') }
-    catch (e) { pushLog('⚠ ' + (e.message || String(e))); setPhase('error') }
+    try {
+      await fn(opts()); setPhase('done')
+      if (!isTest) { savePrintRecord({ name: template.name || 'Etiqueta', size: `${template.widthMm}×${template.heightMm}mm`, copies: Number(copies) }); setHist(listPrintRecords()) }
+    } catch (e) { pushLog('⚠ ' + (e.message || String(e))); setPhase('error') }
   }
 
   async function doShare() {
@@ -99,13 +109,37 @@ export default function PrintModal({ open, onClose, template }) {
                 </div>
                 {log.length > 0 && <div className={`log ${phase}`}>{log.map((l, i) => <div key={i}>{l}</div>)}</div>}
                 <div className="modal-actions" style={{ marginTop: 12 }}>
-                  <button className="btn" onClick={() => run((o) => printTestNiimbot(o))} disabled={busy} title="1 etiqueta de teste p/ calibrar">🧪 Teste</button>
+                  <button className="btn" onClick={() => run((o) => printTestNiimbot(o), true)} disabled={busy} title="1 etiqueta de teste p/ calibrar">🧪 Teste</button>
                   <button className="btn primary" onClick={() => run((o) => printTemplateNiimbot(template, o))} disabled={busy}>
                     {busy ? 'Imprimindo…' : connected ? `Imprimir em ${conn.name || 'Niimbot'}` : 'Conectar e imprimir'}
                   </button>
                 </div>
               </>
             )}
+        </div>
+
+        <div className="print-card" style={{ marginBottom: 0 }}>
+          <div className="print-card-head" style={{ justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setShowHist((v) => !v)}>
+            <strong>🧾 Histórico de impressão {hist.length ? `(${hist.length})` : ''}</strong>
+            <span style={{ color: 'var(--muted)' }}>{showHist ? '▲' : '▼'}</span>
+          </div>
+          {showHist && (
+            hist.length === 0
+              ? <p className="hint" style={{ margin: 0 }}>Nenhuma impressão registrada ainda.</p>
+              : (
+                <>
+                  <div style={{ maxHeight: 160, overflow: 'auto' }}>
+                    {hist.slice(0, 50).map((r, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12.5, padding: '4px 0', borderBottom: '1px solid var(--line)' }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><b>{r.name}</b> · {r.size}{r.copies > 1 ? ` · ${r.copies}×` : ''}</span>
+                        <span style={{ color: 'var(--muted)', flexShrink: 0 }}>{whenStr(r.at)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <button className="btn sm" style={{ marginTop: 8 }} onClick={() => { clearPrintRecords(); setHist([]) }}>Limpar histórico</button>
+                </>
+              )
+          )}
         </div>
 
         <div className="modal-actions">

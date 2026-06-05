@@ -5,10 +5,34 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 const ELABEL = { text: 'Texto', rect: 'Retângulo', line: 'Linha', qr: 'QR', barcode: 'Cód. barras', icon: 'Ícone', ornament: 'Ornamento', image: 'Imagem', date: 'Data', table: 'Tabela' }
 
 // Palco do editor: canvas + alças arrastáveis + guias de alinhamento (snap).
-export default function Stage({ template, scale, selId, selIds = [], onSelect, onChange }) {
+export default function Stage({ template, scale, zoom = 1, onZoom, selId, selIds = [], onSelect, onChange }) {
   const canvasRef = useRef(null)
   const [guides, setGuides] = useState([])
   const { widthMm, heightMm, elements } = template
+  // Pinça (2 dedos) → zoom do preview. O zoom do navegador está desativado no app.
+  const pointers = useRef(new Map())
+  const pinch = useRef(null)
+  function onWrapDown(e) {
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (pointers.current.size === 2) {
+      const [a, b] = [...pointers.current.values()]
+      pinch.current = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, z0: zoom }
+    }
+  }
+  function onWrapMove(e) {
+    if (!pointers.current.has(e.pointerId)) return
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (pointers.current.size === 2 && pinch.current && onZoom) {
+      e.preventDefault()
+      const [a, b] = [...pointers.current.values()]
+      const d = Math.hypot(a.x - b.x, a.y - b.y)
+      onZoom(clamp(pinch.current.z0 * d / pinch.current.d0, 0.5, 4))
+    }
+  }
+  function onWrapUp(e) {
+    pointers.current.delete(e.pointerId)
+    if (pointers.current.size < 2) pinch.current = null
+  }
 
   useEffect(() => {
     let alive = true
@@ -84,8 +108,8 @@ export default function Stage({ template, scale, selId, selIds = [], onSelect, o
   }
 
   return (
-    <div className="stage-wrap">
-      <div className="stage" style={{ width: widthMm * scale, height: heightMm * scale }} onPointerDown={() => onSelect(null)}>
+    <div className="stage-wrap" onPointerDown={onWrapDown} onPointerMove={onWrapMove} onPointerUp={onWrapUp} onPointerCancel={onWrapUp}>
+      <div className="stage" style={{ width: widthMm * scale, height: heightMm * scale, borderRadius: template.shape === 'round' ? '50%' : 6 }} onPointerDown={() => onSelect(null)}>
         <canvas ref={canvasRef} style={{ width: widthMm * scale, height: heightMm * scale }} />
         {guides.map((g, i) => (
           <span
@@ -109,7 +133,10 @@ export default function Stage({ template, scale, selId, selIds = [], onSelect, o
         ))}
       </div>
       <div className="stage-meta">
-        <b>{widthMm} × {heightMm} mm</b> · {elements.length} elemento(s) · arraste para mover · encaixa no centro e nas bordas
+        <b>{widthMm} × {heightMm} mm</b> · {elements.length} elemento(s)
+        {Math.abs(zoom - 1) > 0.01
+          ? <> · <button className="zoom-reset" onClick={() => onZoom && onZoom(1)}>zoom {Math.round(zoom * 100)}% ✕</button></>
+          : <> · pinça p/ ampliar · arraste para mover</>}
       </div>
     </div>
   )

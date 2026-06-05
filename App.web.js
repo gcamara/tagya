@@ -55,12 +55,14 @@ export default function App() {
   const [showActions, setShowActions] = useState(false)
   const isMobile = vw < 860
 
+  const [zoom, setZoom] = useState(1)
   // Escala do preview cabe na largura disponível (3 colunas no desktop, empilhado no mobile).
-  const scale = useMemo(() => {
+  const baseScale = useMemo(() => {
     const wide = vw >= 860
     const avail = wide ? Math.max(240, vw - 230 - 290 - 80) : Math.max(220, vw - 44)
     return clamp(Math.min(700, avail) / template.widthMm, 4, 24)
   }, [template.widthMm, vw])
+  const scale = baseScale * zoom
   const sel = template.elements.find((e) => e.id === selId) || null
 
   // ---- Histórico (desfazer/refazer) ----
@@ -197,6 +199,21 @@ export default function App() {
       return { ...e, x: clamp(Math.round((e.x + dx) * 10) / 10, 0, W - e.w), y: clamp(Math.round((e.y + dy) * 10) / 10, 0, H - e.h) }
     }) }))
   }
+  // Distribui os selecionados com espaçamento igual (h: horizontal, v: vertical).
+  function distributeSelected(axis) {
+    const ids = selIds
+    if (ids.length < 3) return
+    pushHistory()
+    const key = axis === 'h' ? 'x' : 'y', size = axis === 'h' ? 'w' : 'h'
+    const els = templateRef.current.elements.filter((e) => ids.includes(e.id)).sort((a, b) => a[key] - b[key])
+    const start = els[0][key], end = els[els.length - 1][key] + els[els.length - 1][size]
+    const totalSize = els.reduce((s, e) => s + e[size], 0)
+    const gap = (end - start - totalSize) / (els.length - 1)
+    let pos = start
+    const np = {}
+    for (const e of els) { np[e.id] = Math.round(pos * 10) / 10; pos += e[size] + gap }
+    setTemplate((t) => ({ ...t, elements: t.elements.map((e) => (np[e.id] != null ? { ...e, [key]: np[e.id] } : e)) }))
+  }
   // Alinha TODOS os selecionados na etiqueta (cada um pela própria caixa).
   function alignSelected(h, v) {
     const ids = selIds.length ? selIds : (selId ? [selId] : [])
@@ -291,11 +308,11 @@ export default function App() {
     setSelId(el.id); setSelIds([el.id])
   }
 
-  function onImageFile(id, e) {
+  function onImageFile(id, e, field = 'src') {
     const file = e.target.files && e.target.files[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => { pushHistory(); updateEl(id, { src: String(reader.result) }) }
+    reader.onload = () => { pushHistory(); updateEl(id, { [field]: String(reader.result) }) }
     reader.readAsDataURL(file)
   }
 
@@ -305,6 +322,7 @@ export default function App() {
   }
 
   function setName(name) { pushHistory('name'); setTemplate((t) => ({ ...t, name })) }
+  function setShape(s) { pushHistory('shape'); setTemplate((t) => ({ ...t, shape: s === 'round' ? 'round' : undefined })) }
 
   function newLabel() {
     pushHistory()
@@ -366,6 +384,12 @@ export default function App() {
         })}
       </div>
 
+      <h3>Formato</h3>
+      <div className="seg">
+        <button className={`seg-btn ${template.shape !== 'round' ? 'sel' : ''}`} onClick={() => setShape('rect')}>▭ Retangular</button>
+        <button className={`seg-btn ${template.shape === 'round' ? 'sel' : ''}`} onClick={() => setShape('round')}>◯ Redondo</button>
+      </div>
+
       <h3>Personalizado (mm)</h3>
       <div className="row2">
         <div className="field" style={{ margin: 0 }}>
@@ -380,8 +404,8 @@ export default function App() {
     </>
   )
 
-  const stage = <Stage template={template} scale={scale} selId={selId} selIds={selIds} onSelect={selectEl} onChange={updateEl} onBeginChange={() => pushHistory()} />
-  const multiSel = selIds.length > 1 ? { count: selIds.length, onAlign: alignSelected, onRemove: removeSelected } : null
+  const stage = <Stage template={template} scale={scale} zoom={zoom} onZoom={setZoom} selId={selId} selIds={selIds} onSelect={selectEl} onChange={updateEl} onBeginChange={() => pushHistory()} />
+  const multiSel = selIds.length > 1 ? { count: selIds.length, onAlign: alignSelected, onRemove: removeSelected, onDistribute: distributeSelected } : null
   const inspector = <Inspector el={sel} multi={multiSel} index={template.elements.findIndex((e) => e.id === selId)} count={template.elements.length} onUpdate={editEl} onRemove={removeEl} onImageFile={onImageFile} onDuplicate={duplicateEl} onReorder={reorderEl} onAlign={alignEl} />
 
   const NAV = [

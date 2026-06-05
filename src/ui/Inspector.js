@@ -74,6 +74,15 @@ export default function Inspector({ el, multi, index = -1, count = 0, onUpdate, 
             ))}
           </div>
         </div>
+        {multi.count >= 3 && (
+          <div className="field">
+            <label>Distribuir (espaçar igual)</label>
+            <div className="row2">
+              <button className="btn sm" onClick={() => multi.onDistribute('h')}>↔ Horizontal</button>
+              <button className="btn sm" onClick={() => multi.onDistribute('v')}>↕ Vertical</button>
+            </div>
+          </div>
+        )}
         <button className="btn danger" style={{ width: '100%', marginTop: 6, justifyContent: 'center' }} onClick={multi.onRemove}><Trash2 size={15} /> Remover {multi.count} elementos</button>
       </div>
     )
@@ -171,6 +180,26 @@ export default function Inspector({ el, multi, index = -1, count = 0, onUpdate, 
         </>
       )}
 
+      {el.type === 'qr' && (
+        <>
+          <div className="field">
+            <label>Correção de erro</label>
+            <select value={el.qrEcc || 'M'} onChange={(e) => set({ qrEcc: e.target.value })}>
+              <option value="L">Baixa (L)</option>
+              <option value="M">Média (M)</option>
+              <option value="Q">Alta (Q)</option>
+              <option value="H">Máxima (H) — c/ logo</option>
+            </select>
+          </div>
+          <div className="field">
+            <label>Logo no centro (opcional)</label>
+            {el.logoSrc
+              ? <button className="btn sm danger" onClick={() => set({ logoSrc: null })}><Trash2 size={13} /> Remover logo</button>
+              : <input type="file" accept="image/*" onChange={(e) => onImageFile(el.id, e, 'logoSrc')} />}
+          </div>
+        </>
+      )}
+
       {el.type === 'date' && (
         <>
           <div className="field">
@@ -229,6 +258,10 @@ export default function Inspector({ el, multi, index = -1, count = 0, onUpdate, 
             </div>
           </div>
           <label className="check"><input type="checkbox" checked={!!el.bold} onChange={(e) => set({ bold: e.target.checked })} /> Negrito</label>
+          <div className="field">
+            <label>Curvatura (arco) · {Math.round(el.curve || 0)}°</label>
+            <input type="range" min="-180" max="180" step="1" value={el.curve || 0} onChange={(e) => set({ curve: Number(e.target.value) })} style={{ width: '100%', accentColor: 'var(--accent)' }} />
+          </div>
         </>
       )}
 

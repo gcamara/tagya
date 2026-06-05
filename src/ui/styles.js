@@ -71,6 +71,12 @@ body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;backgrou
 .add-ico{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
 .add-lbl{line-height:1.1;text-align:center}
 
+.seg{display:flex;gap:6px}
+.seg-btn{flex:1;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:9px;padding:8px 6px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+.seg-btn:hover{border-color:var(--accent-2)}
+.seg-btn.sel{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.app.dark .seg-btn{background:#2a2336}
+
 .sizes{display:flex;flex-direction:column;gap:6px}
 .size-opt{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:13px;background:#fff}
 .size-opt:hover{border-color:var(--accent-2)}
@@ -92,6 +98,7 @@ body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;backgrou
 .guide.h{height:1px;margin-top:-.5px}
 .stage-meta{font-size:12px;color:var(--muted);text-align:center}
 .stage-meta b{color:var(--ink)}
+.zoom-reset{border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);border-radius:20px;padding:1px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
 
 .field{margin-bottom:12px}
 .field label{display:block;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}

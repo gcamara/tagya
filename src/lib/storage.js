@@ -2,6 +2,7 @@
 
 const KEY = 'tagya.templates.v1'
 const PREFS = 'tagya.prefs.v1'
+const PRINTS = 'tagya.prints.v1'
 
 const uid = () => 'tpl_' + Math.random().toString(36).slice(2, 9)
 
@@ -36,6 +37,21 @@ export function loadPrefs() {
 }
 export function savePrefs(prefs) {
   try { localStorage.setItem(PREFS, JSON.stringify(prefs)) } catch { /* ignore */ }
+}
+
+// ---- Histórico de impressão ----
+export function listPrintRecords() {
+  try { return JSON.parse(localStorage.getItem(PRINTS) || '[]') } catch { return [] }
+}
+export function savePrintRecord(rec) {
+  try {
+    const list = listPrintRecords()
+    list.unshift({ ...rec, at: stamp() })
+    localStorage.setItem(PRINTS, JSON.stringify(list.slice(0, 100)))
+  } catch { /* quota */ }
+}
+export function clearPrintRecords() {
+  try { localStorage.removeItem(PRINTS) } catch { /* */ }
 }
 
 // data/hora local em ISO curto — sem usar Date.now diretamente fora daqui.
