@@ -118,6 +118,17 @@ body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;backgrou
 .tbl-cell:focus{outline:none;border-color:var(--accent)}
 .app.dark .tbl-cell{background:#2a2336}
 
+/* ---- Abas do inspetor (estilo Canva) ---- */
+.ins-tabs{display:flex;gap:5px;overflow-x:auto;margin:0 -2px 12px;padding:2px;-webkit-overflow-scrolling:touch}
+.ins-tabs::-webkit-scrollbar{height:0}
+.ins-tab{flex:0 0 auto;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:20px;padding:7px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;transition:.15s}
+.ins-tab:hover{border-color:var(--accent-2);color:var(--ink)}
+.ins-tab.sel{background:var(--accent);border-color:var(--accent);color:#fff}
+.app.dark .ins-tab{background:#2a2336}
+.app.dark .ins-tab.sel{background:var(--accent);color:#fff}
+.ins-pane{animation:insFade .18s ease}
+@keyframes insFade{from{opacity:.4;transform:translateY(3px)}to{opacity:1;transform:none}}
+
 .ins-actions{display:flex;gap:5px;margin-bottom:14px}
 .iact{flex:1;display:grid;place-items:center;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:9px;padding:8px 0;cursor:pointer;transition:.15s}
 .iact:hover:not(:disabled){border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}

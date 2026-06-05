@@ -45,7 +45,6 @@ function TableEditor({ el, set }) {
 }
 const ELABEL = { text: 'Texto', rect: 'Retângulo', line: 'Linha', qr: 'QR Code', barcode: 'Cód. barras', icon: 'Ícone', ornament: 'Ornamento', image: 'Imagem', date: 'Data', table: 'Tabela' }
 
-// Painel de propriedades do elemento selecionado.
 const ALIGN_CELLS = [
   ['left', 'top'], ['center', 'top'], ['right', 'top'],
   ['left', 'middle'], ['center', 'middle'], ['right', 'middle'],
@@ -55,7 +54,11 @@ const ALIGN_TITLE = {
   left: 'esquerda', center: 'centro', right: 'direita', top: 'topo', middle: 'meio', bottom: 'base'
 }
 
+// Painel de propriedades do elemento selecionado — seções viram abas (estilo Canva).
 export default function Inspector({ el, multi, index = -1, count = 0, onUpdate, onRemove, onImageFile, onDuplicate, onReorder, onAlign }) {
+  const [tab, setTab] = useState(0)
+  useEffect(() => { setTab(0) }, [el && el.id, el && el.type]) // volta à 1ª aba ao trocar de elemento
+
   if (multi) {
     return (
       <div className="inspector">
@@ -98,6 +101,158 @@ export default function Inspector({ el, multi, index = -1, count = 0, onUpdate, 
 
   const set = (patch) => onUpdate(el.id, patch)
 
+  // --- conteúdo de cada seção (vira aba) ---
+  const posNode = (
+    <>
+      <div className="field">
+        <label>Posição e tamanho (mm)</label>
+        <div className="row4">
+          <input type="number" title="X" value={round(el.x)} onChange={(e) => set({ x: Number(e.target.value) })} />
+          <input type="number" title="Y" value={round(el.y)} onChange={(e) => set({ y: Number(e.target.value) })} />
+          <input type="number" title="Largura" value={round(el.w)} onChange={(e) => set({ w: Number(e.target.value) })} />
+          <input type="number" title="Altura" value={round(el.h)} onChange={(e) => set({ h: Number(e.target.value) })} />
+        </div>
+      </div>
+      {onAlign && (
+        <div className="field">
+          <label>Alinhar na etiqueta</label>
+          <div className="align-grid">
+            {ALIGN_CELLS.map(([h, v]) => (
+              <button key={h + v} className="align-cell" title={`Alinhar: ${ALIGN_TITLE[h]} · ${ALIGN_TITLE[v]}`} onClick={() => onAlign(el.id, h, v)}>
+                <span className={`align-dot h-${h} v-${v}`} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="field">
+        <label>Rotação · {Math.round(el.rot || 0)}°</label>
+        <div className="rot-row">
+          <input type="range" min="0" max="360" step="1" value={el.rot || 0} onChange={(e) => set({ rot: Number(e.target.value) })} />
+          {[0, 90, 180, 270].map((d) => (
+            <button key={d} className={`rot-q ${(el.rot || 0) === d ? 'sel' : ''}`} onClick={() => set({ rot: d })}>{d}°</button>
+          ))}
+        </div>
+      </div>
+    </>
+  )
+
+  const fontNode = (
+    <>
+      <div className="field">
+        <label>Tipografia · {FONTS.length} fontes</label>
+        <FontPicker value={el.font || DEFAULT_FONT} text={el.type === 'date' ? 'Data' : el.text} onPick={(css) => set({ font: css })} />
+      </div>
+      <div className="row2">
+        <div className="field">
+          <label>Fonte (mm)</label>
+          <input type="number" step="0.2" value={el.fontMm} onChange={(e) => set({ fontMm: Number(e.target.value) })} />
+        </div>
+        <div className="field">
+          <label>Alinhar</label>
+          <select value={el.align} onChange={(e) => set({ align: e.target.value })}>
+            <option value="left">Esquerda</option>
+            <option value="center">Centro</option>
+            <option value="right">Direita</option>
+          </select>
+        </div>
+      </div>
+      <label className="check"><input type="checkbox" checked={!!el.bold} onChange={(e) => set({ bold: e.target.checked })} /> Negrito</label>
+      <div className="field">
+        <label>Curvatura (arco) · {Math.round(el.curve || 0)}°</label>
+        <input type="range" min="-180" max="180" step="1" value={el.curve || 0} onChange={(e) => set({ curve: Number(e.target.value) })} style={{ width: '100%', accentColor: 'var(--accent)' }} />
+      </div>
+    </>
+  )
+
+  const sections = []
+  if (el.type === 'text') {
+    sections.push({ id: 'txt', label: 'Texto', node: (
+      <div className="field"><label>Texto</label><textarea value={el.text} onChange={(e) => set({ text: e.target.value })} /></div>
+    ) })
+    sections.push({ id: 'fnt', label: 'Fonte', node: fontNode })
+  } else if (el.type === 'date') {
+    sections.push({ id: 'dt', label: 'Data', node: (
+      <>
+        <div className="field">
+          <label>Tipo de data</label>
+          <select value={el.dateMode || 'today'} onChange={(e) => set({ dateMode: e.target.value })}>
+            <option value="today">Hoje (data de impressão)</option>
+            <option value="offset">Validade (hoje + dias)</option>
+            <option value="fixed">Data fixa</option>
+          </select>
+        </div>
+        {el.dateMode === 'offset' && (
+          <div className="field"><label>Dias de validade (+)</label><input type="number" value={el.offsetDays ?? 0} onChange={(e) => set({ offsetDays: Number(e.target.value) })} /></div>
+        )}
+        {el.dateMode === 'fixed' && (
+          <div className="field"><label>Data</label><input type="date" value={el.fixedDate || ''} onChange={(e) => set({ fixedDate: e.target.value })} /></div>
+        )}
+        <div className="row2">
+          <div className="field"><label>Formato</label><select value={el.fmt || 'dd/MM/yyyy'} onChange={(e) => set({ fmt: e.target.value })}>{DATE_FORMATS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}</select></div>
+          <div className="field"><label>Prefixo</label><input type="text" placeholder="Val: " value={el.prefix || ''} onChange={(e) => set({ prefix: e.target.value })} /></div>
+        </div>
+      </>
+    ) })
+    sections.push({ id: 'fnt', label: 'Fonte', node: fontNode })
+  } else if (el.type === 'qr') {
+    sections.push({ id: 'c', label: 'Conteúdo', node: (
+      <>
+        <div className="field"><label>Conteúdo (URL ou texto)</label><input type="text" value={el.text || ''} onChange={(e) => set({ text: e.target.value })} /></div>
+        <div className="field">
+          <label>Correção de erro</label>
+          <select value={el.qrEcc || 'M'} onChange={(e) => set({ qrEcc: e.target.value })}>
+            <option value="L">Baixa (L)</option><option value="M">Média (M)</option><option value="Q">Alta (Q)</option><option value="H">Máxima (H) — c/ logo</option>
+          </select>
+        </div>
+        <div className="field">
+          <label>Logo no centro (opcional)</label>
+          {el.logoSrc ? <button className="btn sm danger" onClick={() => set({ logoSrc: null })}><Trash2 size={13} /> Remover logo</button> : <input type="file" accept="image/*" onChange={(e) => onImageFile(el.id, e, 'logoSrc')} />}
+        </div>
+      </>
+    ) })
+  } else if (el.type === 'barcode') {
+    sections.push({ id: 'c', label: 'Conteúdo', node: (
+      <>
+        <div className="field"><label>Conteúdo (números/letras)</label><input type="text" value={el.text || ''} onChange={(e) => set({ text: e.target.value })} /></div>
+        <div className="field"><label>Formato</label><select value={el.barFormat || 'CODE128'} onChange={(e) => set({ barFormat: e.target.value })}>{BARCODE_FORMATS.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</select></div>
+        <label className="check"><input type="checkbox" checked={!!el.barText} onChange={(e) => set({ barText: e.target.checked })} /> Mostrar números</label>
+      </>
+    ) })
+  } else if (el.type === 'icon') {
+    sections.push({ id: 'i', label: 'Ícone', node: <IconPicker libId={el.iconLib || 'etiqya'} value={el.icon} onPick={(lib, k) => set({ iconLib: lib, icon: k })} /> })
+  } else if (el.type === 'ornament') {
+    sections.push({ id: 'o', label: 'Ornamento', node: <OrnamentPicker value={el.ornament} onPick={(k) => set({ ornament: k })} /> })
+  } else if (el.type === 'table') {
+    sections.push({ id: 't', label: 'Tabela', node: <TableEditor el={el} set={set} /> })
+  } else if (el.type === 'image') {
+    sections.push({ id: 'im', label: 'Imagem', node: (
+      <>
+        <div className="field"><label>Imagem (logo)</label><input type="file" accept="image/*" onChange={(e) => onImageFile(el.id, e)} /></div>
+        {el.src && (
+          <>
+            <label className="check"><input type="checkbox" checked={el.bw !== false} onChange={(e) => set({ bw: e.target.checked })} /> Preto e branco (térmica)</label>
+            {el.bw !== false && (
+              <>
+                <div className="field"><label>Limiar · {Math.round(el.threshold ?? 128)}</label><input type="range" min="20" max="235" step="1" value={el.threshold ?? 128} onChange={(e) => set({ threshold: Number(e.target.value) })} style={{ accentColor: 'var(--accent)' }} /></div>
+                <label className="check"><input type="checkbox" checked={!!el.dither} onChange={(e) => set({ dither: e.target.checked })} /> Dithering (meio-tom p/ fotos)</label>
+              </>
+            )}
+          </>
+        )}
+      </>
+    ) })
+  } else if (el.type === 'rect' || el.type === 'line') {
+    sections.push({ id: 'st', label: 'Estilo', node: (
+      <>
+        <div className="field"><label>Espessura da linha (mm)</label><input type="number" step="0.1" value={el.lineMm ?? 0.4} onChange={(e) => set({ lineMm: Number(e.target.value) })} /></div>
+        {el.type === 'rect' && <label className="check"><input type="checkbox" checked={!!el.fill} onChange={(e) => set({ fill: e.target.checked })} /> Preenchido (preto)</label>}
+      </>
+    ) })
+  }
+  sections.push({ id: 'pos', label: 'Posição', node: posNode })
+  const cur = Math.min(tab, sections.length - 1)
+
   return (
     <div className="inspector">
       <div className="ins-head">
@@ -121,190 +276,17 @@ export default function Inspector({ el, multi, index = -1, count = 0, onUpdate, 
         </div>
       )}
 
-      <div className="field">
-        <label>Posição e tamanho (mm)</label>
-        <div className="row4">
-          <input type="number" title="X" value={round(el.x)} onChange={(e) => set({ x: Number(e.target.value) })} />
-          <input type="number" title="Y" value={round(el.y)} onChange={(e) => set({ y: Number(e.target.value) })} />
-          <input type="number" title="Largura" value={round(el.w)} onChange={(e) => set({ w: Number(e.target.value) })} />
-          <input type="number" title="Altura" value={round(el.h)} onChange={(e) => set({ h: Number(e.target.value) })} />
-        </div>
-      </div>
-
-      {onAlign && (
-        <div className="field">
-          <label>Alinhar na etiqueta</label>
-          <div className="align-grid">
-            {ALIGN_CELLS.map(([h, v]) => (
-              <button key={h + v} className="align-cell" title={`Alinhar: ${ALIGN_TITLE[h]} · ${ALIGN_TITLE[v]}`} onClick={() => onAlign(el.id, h, v)}>
-                <span className={`align-dot h-${h} v-${v}`} />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="field">
-        <label>Rotação · {Math.round(el.rot || 0)}°</label>
-        <div className="rot-row">
-          <input type="range" min="0" max="360" step="1" value={el.rot || 0} onChange={(e) => set({ rot: Number(e.target.value) })} />
-          {[0, 90, 180, 270].map((d) => (
-            <button key={d} className={`rot-q ${(el.rot || 0) === d ? 'sel' : ''}`} onClick={() => set({ rot: d })}>{d}°</button>
+      {sections.length > 1 && (
+        <div className="ins-tabs">
+          {sections.map((s, i) => (
+            <button key={s.id} className={`ins-tab ${i === cur ? 'sel' : ''}`} onClick={() => setTab(i)}>{s.label}</button>
           ))}
         </div>
-      </div>
-
-      {el.type === 'text' && (
-        <div className="field">
-          <label>Texto</label>
-          <textarea value={el.text} onChange={(e) => set({ text: e.target.value })} />
-        </div>
       )}
 
-      {(el.type === 'qr' || el.type === 'barcode') && (
-        <div className="field">
-          <label>Conteúdo {el.type === 'qr' ? '(URL ou texto)' : '(números/letras)'}</label>
-          <input type="text" value={el.text || ''} onChange={(e) => set({ text: e.target.value })} />
-        </div>
-      )}
+      <div className="ins-pane">{sections[cur].node}</div>
 
-      {el.type === 'barcode' && (
-        <>
-          <div className="field">
-            <label>Formato</label>
-            <select value={el.barFormat || 'CODE128'} onChange={(e) => set({ barFormat: e.target.value })}>
-              {BARCODE_FORMATS.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-            </select>
-          </div>
-          <label className="check"><input type="checkbox" checked={!!el.barText} onChange={(e) => set({ barText: e.target.checked })} /> Mostrar números</label>
-        </>
-      )}
-
-      {el.type === 'qr' && (
-        <>
-          <div className="field">
-            <label>Correção de erro</label>
-            <select value={el.qrEcc || 'M'} onChange={(e) => set({ qrEcc: e.target.value })}>
-              <option value="L">Baixa (L)</option>
-              <option value="M">Média (M)</option>
-              <option value="Q">Alta (Q)</option>
-              <option value="H">Máxima (H) — c/ logo</option>
-            </select>
-          </div>
-          <div className="field">
-            <label>Logo no centro (opcional)</label>
-            {el.logoSrc
-              ? <button className="btn sm danger" onClick={() => set({ logoSrc: null })}><Trash2 size={13} /> Remover logo</button>
-              : <input type="file" accept="image/*" onChange={(e) => onImageFile(el.id, e, 'logoSrc')} />}
-          </div>
-        </>
-      )}
-
-      {el.type === 'date' && (
-        <>
-          <div className="field">
-            <label>Tipo de data</label>
-            <select value={el.dateMode || 'today'} onChange={(e) => set({ dateMode: e.target.value })}>
-              <option value="today">Hoje (data de impressão)</option>
-              <option value="offset">Validade (hoje + dias)</option>
-              <option value="fixed">Data fixa</option>
-            </select>
-          </div>
-          {el.dateMode === 'offset' && (
-            <div className="field">
-              <label>Dias de validade (+)</label>
-              <input type="number" value={el.offsetDays ?? 0} onChange={(e) => set({ offsetDays: Number(e.target.value) })} />
-            </div>
-          )}
-          {el.dateMode === 'fixed' && (
-            <div className="field">
-              <label>Data</label>
-              <input type="date" value={el.fixedDate || ''} onChange={(e) => set({ fixedDate: e.target.value })} />
-            </div>
-          )}
-          <div className="row2">
-            <div className="field">
-              <label>Formato</label>
-              <select value={el.fmt || 'dd/MM/yyyy'} onChange={(e) => set({ fmt: e.target.value })}>
-                {DATE_FORMATS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
-              </select>
-            </div>
-            <div className="field">
-              <label>Prefixo</label>
-              <input type="text" placeholder="Val: " value={el.prefix || ''} onChange={(e) => set({ prefix: e.target.value })} />
-            </div>
-          </div>
-        </>
-      )}
-
-      {(el.type === 'text' || el.type === 'date') && (
-        <>
-          <div className="field">
-            <label>Tipografia · {FONTS.length} fontes</label>
-            <FontPicker value={el.font || DEFAULT_FONT} text={el.type === 'date' ? 'Data' : el.text} onPick={(css) => set({ font: css })} />
-          </div>
-          <div className="row2">
-            <div className="field">
-              <label>Fonte (mm)</label>
-              <input type="number" step="0.2" value={el.fontMm} onChange={(e) => set({ fontMm: Number(e.target.value) })} />
-            </div>
-            <div className="field">
-              <label>Alinhar</label>
-              <select value={el.align} onChange={(e) => set({ align: e.target.value })}>
-                <option value="left">Esquerda</option>
-                <option value="center">Centro</option>
-                <option value="right">Direita</option>
-              </select>
-            </div>
-          </div>
-          <label className="check"><input type="checkbox" checked={!!el.bold} onChange={(e) => set({ bold: e.target.checked })} /> Negrito</label>
-          <div className="field">
-            <label>Curvatura (arco) · {Math.round(el.curve || 0)}°</label>
-            <input type="range" min="-180" max="180" step="1" value={el.curve || 0} onChange={(e) => set({ curve: Number(e.target.value) })} style={{ width: '100%', accentColor: 'var(--accent)' }} />
-          </div>
-        </>
-      )}
-
-      {(el.type === 'rect' || el.type === 'line') && (
-        <div className="field">
-          <label>Espessura da linha (mm)</label>
-          <input type="number" step="0.1" value={el.lineMm ?? 0.4} onChange={(e) => set({ lineMm: Number(e.target.value) })} />
-        </div>
-      )}
-      {el.type === 'rect' && (
-        <label className="check"><input type="checkbox" checked={!!el.fill} onChange={(e) => set({ fill: e.target.checked })} /> Preenchido (preto)</label>
-      )}
-
-      {el.type === 'table' && <TableEditor el={el} set={set} />}
-
-      {el.type === 'icon' && <IconPicker libId={el.iconLib || 'etiqya'} value={el.icon} onPick={(lib, k) => set({ iconLib: lib, icon: k })} />}
-
-      {el.type === 'ornament' && <OrnamentPicker value={el.ornament} onPick={(k) => set({ ornament: k })} />}
-
-      {el.type === 'image' && (
-        <>
-          <div className="field">
-            <label>Imagem (logo)</label>
-            <input type="file" accept="image/*" onChange={(e) => onImageFile(el.id, e)} />
-          </div>
-          {el.src && (
-            <>
-              <label className="check"><input type="checkbox" checked={el.bw !== false} onChange={(e) => set({ bw: e.target.checked })} /> Preto e branco (térmica)</label>
-              {el.bw !== false && (
-                <>
-                  <div className="field">
-                    <label>Limiar · {Math.round(el.threshold ?? 128)}</label>
-                    <input type="range" min="20" max="235" step="1" value={el.threshold ?? 128} onChange={(e) => set({ threshold: Number(e.target.value) })} style={{ accentColor: 'var(--accent)' }} />
-                  </div>
-                  <label className="check"><input type="checkbox" checked={!!el.dither} onChange={(e) => set({ dither: e.target.checked })} /> Dithering (meio-tom p/ fotos)</label>
-                </>
-              )}
-            </>
-          )}
-        </>
-      )}
-
-      <button className="btn danger" style={{ width: '100%', marginTop: 10, justifyContent: 'center' }} onClick={() => onRemove(el.id)}><Trash2 size={15} /> Remover elemento</button>
+      <button className="btn danger" style={{ width: '100%', marginTop: 12, justifyContent: 'center' }} onClick={() => onRemove(el.id)}><Trash2 size={15} /> Remover elemento</button>
     </div>
   )
 }
