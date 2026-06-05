@@ -14,28 +14,35 @@ import BridgePicker from './src/ui/BridgePicker.js'
 import ConnectionBar from './src/ui/ConnectionBar.js'
 import BatchModal from './src/ui/BatchModal.js'
 import BrandIcon from './src/ui/BrandIcon.js'
+import SettingsModal from './src/ui/SettingsModal.js'
 import {
   Plus, Shapes, SlidersHorizontal, Save, Printer, MoreHorizontal,
   Type, QrCode, Barcode, Star, Square, Minus, ImageIcon,
   FilePlus2, Sparkles, FolderOpen, Download, Moon, Sun,
-  Undo2, Redo2, Calendar, Table, Rows
+  Undo2, Redo2, Calendar, Table, Rows, Settings
 } from './src/ui/icons.js'
 
 const uid = () => 'el_' + Math.random().toString(36).slice(2, 8)
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 const clone = (o) => JSON.parse(JSON.stringify(o))
 
-const ADD_ITEMS = [
-  { type: 'text', Icon: Type, label: 'Texto' },
-  { type: 'qr', Icon: QrCode, label: 'QR Code' },
-  { type: 'barcode', Icon: Barcode, label: 'Cód. barras' },
-  { type: 'icon', Icon: Star, label: 'Ícone' },
-  { type: 'date', Icon: Calendar, label: 'Data' },
-  { type: 'table', Icon: Table, label: 'Tabela' },
-  { type: 'rect', Icon: Square, label: 'Retângulo' },
-  { type: 'line', Icon: Minus, label: 'Linha' },
-  { type: 'ornament', Icon: Sparkles, label: 'Ornamento' },
-  { type: 'image', Icon: ImageIcon, label: 'Imagem' }
+const ADD_GROUPS = [
+  { name: 'Texto & dados', items: [
+    { type: 'text', Icon: Type, label: 'Texto' },
+    { type: 'date', Icon: Calendar, label: 'Data' },
+    { type: 'qr', Icon: QrCode, label: 'QR Code' },
+    { type: 'barcode', Icon: Barcode, label: 'Cód. barras' },
+    { type: 'table', Icon: Table, label: 'Tabela' }
+  ] },
+  { name: 'Visual', items: [
+    { type: 'icon', Icon: Star, label: 'Ícone' },
+    { type: 'ornament', Icon: Sparkles, label: 'Ornamento' },
+    { type: 'image', Icon: ImageIcon, label: 'Imagem' }
+  ] },
+  { name: 'Formas', items: [
+    { type: 'rect', Icon: Square, label: 'Retângulo' },
+    { type: 'line', Icon: Minus, label: 'Linha' }
+  ] }
 ]
 
 export default function App() {
@@ -47,6 +54,7 @@ export default function App() {
   const [showTemplates, setShowTemplates] = useState(false)
   const [showStarters, setShowStarters] = useState(false)
   const [showBatch, setShowBatch] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [saved, setSaved] = useState([])
   const [toast, setToast] = useState(null)
   const [dark, setDark] = useState(false)
@@ -323,6 +331,7 @@ export default function App() {
 
   function setName(name) { pushHistory('name'); setTemplate((t) => ({ ...t, name })) }
   function setShape(s) { pushHistory('shape'); setTemplate((t) => ({ ...t, shape: s === 'round' ? 'round' : undefined })) }
+  function setDim(dim, v) { pushHistory('size'); setTemplate((t) => ({ ...t, [dim]: Math.max(8, Number(v) || 8) })) }
 
   function newLabel() {
     pushHistory()
@@ -361,46 +370,24 @@ export default function App() {
 
   const railTools = (
     <>
-      <h3>Adicionar elemento</h3>
-      <div className="add-grid">
-        {ADD_ITEMS.map((it) => (
-          <button key={it.type} className="add-btn" onClick={() => { addEl(it.type); if (isMobile) setMobileTab('editar') }}>
-            <span className="add-ico"><it.Icon size={20} strokeWidth={2} /></span>
-            <span className="add-lbl">{it.label}</span>
-          </button>
-        ))}
-      </div>
-
-      <h3>Tamanho da etiqueta</h3>
-      <div className="sizes">
-        {SIZE_PRESETS.map((p) => {
-          const cur = template.widthMm === p.widthMm && template.heightMm === p.heightMm
-          return (
-            <div key={p.id} className={`size-opt ${cur ? 'sel' : ''}`} onClick={() => applySize(p)}>
-              <span className="nm">{p.label}</span>
-              <span className="nt">{p.note}</span>
-            </div>
-          )
-        })}
-      </div>
-
-      <h3>Formato</h3>
-      <div className="seg">
-        <button className={`seg-btn ${template.shape !== 'round' ? 'sel' : ''}`} onClick={() => setShape('rect')}>▭ Retangular</button>
-        <button className={`seg-btn ${template.shape === 'round' ? 'sel' : ''}`} onClick={() => setShape('round')}>◯ Redondo</button>
-      </div>
-
-      <h3>Personalizado (mm)</h3>
-      <div className="row2">
-        <div className="field" style={{ margin: 0 }}>
-          <label>Largura</label>
-          <input type="number" min="8" value={template.widthMm} onChange={(e) => { pushHistory('size'); setTemplate((t) => ({ ...t, widthMm: Math.max(8, Number(e.target.value) || 8) })) }} />
+      {ADD_GROUPS.map((g) => (
+        <div key={g.name}>
+          <h3>{g.name}</h3>
+          <div className="add-grid">
+            {g.items.map((it) => (
+              <button key={it.type} className="add-btn" onClick={() => { addEl(it.type); if (isMobile) setMobileTab('editar') }}>
+                <span className="add-ico"><it.Icon size={20} strokeWidth={2} /></span>
+                <span className="add-lbl">{it.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="field" style={{ margin: 0 }}>
-          <label>Altura</label>
-          <input type="number" min="8" value={template.heightMm} onChange={(e) => { pushHistory('size'); setTemplate((t) => ({ ...t, heightMm: Math.max(8, Number(e.target.value) || 8) })) }} />
-        </div>
-      </div>
+      ))}
+
+      <h3>Etiqueta</h3>
+      <button className="btn" style={{ width: '100%', justifyContent: 'flex-start' }} onClick={() => setShowSettings(true)}>
+        <Settings size={15} /> Configurações · {template.widthMm}×{template.heightMm}mm{template.shape === 'round' ? ' ◯' : ''}
+      </button>
     </>
   )
 
@@ -412,7 +399,7 @@ export default function App() {
     { id: 'tools', Icon: Shapes, label: 'Elementos', onClick: () => setMobileTab('tools') },
     { id: 'editar', Icon: SlidersHorizontal, label: 'Editar', onClick: () => setMobileTab('editar') },
     { id: 'save', Icon: Save, label: 'Salvar', onClick: doSave },
-    { id: 'print', Icon: Printer, label: 'Imprimir', onClick: () => setShowPrint(true), primary: true },
+    { id: 'print', Icon: Printer, label: 'Imprimir', onClick: () => setShowPrint(true) },
     { id: 'more', Icon: MoreHorizontal, label: 'Mais', onClick: () => setShowActions(true) }
   ]
 
@@ -449,9 +436,9 @@ export default function App() {
             <button className="btn ghost" onClick={() => setShowTemplates(true)}><FolderOpen size={15} /> Meus</button>
             <button className="btn ghost" onClick={() => setShowBatch(true)}><Rows size={15} /> Lote</button>
             <button className="btn ghost" onClick={doExport}><Download size={15} /> PNG</button>
-            <button className="btn ghost icon-only" onClick={toggleDark} title="Alternar tema claro/escuro">{dark ? <Sun size={16} /> : <Moon size={16} />}</button>
+            <button className="btn ghost icon-only" onClick={() => setShowSettings(true)} title="Configurações da etiqueta"><Settings size={16} /></button>
+            <button className="btn ghost" onClick={() => setShowPrint(true)} title={bluetoothSupported() ? 'Imprimir na Niimbot' : 'Bluetooth indisponível neste navegador'}><Printer size={15} /> Imprimir</button>
             <button className="btn" onClick={doSave}><Save size={15} /> Salvar</button>
-            <button className="btn primary" onClick={() => setShowPrint(true)} title={bluetoothSupported() ? 'Imprimir na Niimbot' : 'Bluetooth indisponível neste navegador'}><Printer size={15} /> Imprimir</button>
           </div>
         )}
       </header>
@@ -498,7 +485,7 @@ export default function App() {
               <button className="btn" onClick={() => { setShowTemplates(true); setShowActions(false) }}><FolderOpen size={17} /> Meus</button>
               <button className="btn" onClick={() => { setShowBatch(true); setShowActions(false) }}><Rows size={17} /> Lote</button>
               <button className="btn" onClick={() => { doExport(); setShowActions(false) }}><Download size={17} /> PNG</button>
-              <button className="btn" onClick={() => { toggleDark(); setShowActions(false) }}>{dark ? <><Sun size={17} /> Tema claro</> : <><Moon size={17} /> Tema escuro</>}</button>
+              <button className="btn" onClick={() => { setShowSettings(true); setShowActions(false) }}><Settings size={17} /> Configurações</button>
             </div>
           </div>
         </div>
@@ -508,6 +495,7 @@ export default function App() {
       <TemplatesModal open={showTemplates} onClose={() => setShowTemplates(false)} templates={saved} onLoad={loadTemplate} onDelete={removeTemplate} />
       <StarterModal open={showStarters} onClose={() => setShowStarters(false)} onPick={loadStarter} />
       <BatchModal open={showBatch} onClose={() => setShowBatch(false)} template={template} />
+      <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} template={template} onName={setName} onApplySize={applySize} onShape={setShape} onDim={setDim} dark={dark} onToggleDark={toggleDark} />
       <BridgePicker />
 
       {toast && <div className="toast">{toast}</div>}
