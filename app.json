@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "primaryColor": "#0C0A14",
+    "primaryColor": "#16131e",
     "updates": {
       "url": "https://u.expo.dev/7f756abd-b664-4ede-83cc-e2af5da10c60"
     },
@@ -26,7 +26,7 @@
     "android": {
       "package": "com.gabriel.tagya",
       "adaptiveIcon": {
-        "backgroundColor": "#14121C",
+        "backgroundColor": "#16131e",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -43,8 +43,8 @@
       "bundler": "metro",
       "name": "TagYa",
       "shortName": "TagYa",
-      "themeColor": "#0C0A14",
-      "backgroundColor": "#0C0A14",
+      "themeColor": "#16131e",
+      "backgroundColor": "#16131e",
       "display": "standalone",
       "lang": "pt-BR",
       "description": "Editor de etiquetas Niimbot"

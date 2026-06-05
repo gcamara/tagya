@@ -266,11 +266,11 @@ html.tagya-dark,body.tagya-dark{background:#16131e;color:#F3F1F8}
 .app.dark .starter-card canvas,
 .app.dark .batch-preview canvas{background:#fff}
 .app.dark .stage{background:#2a2336}
-.app.dark .stage-wrap{background:#1b1726}
+.app.dark .stage-wrap{background:#16131e}
 .app.dark .banner{background:#2e2710;border-color:#5a4a14;color:#e8cd84}
 .app.dark .topbar input{background:#fff;color:#221b2e}
 .app.dark .ph-tag{border-color:var(--line)}
-.app.dark .topbar{background:#0C0A14;color:#F3F1F8;border-bottom:1px solid rgba(255,255,255,.06);box-shadow:none}
+.app.dark .topbar{background:#16131e;color:#F3F1F8;border-bottom:1px solid rgba(255,255,255,.06);box-shadow:none}
 .app.dark .brand .logo{background:#14121C;border:1px solid rgba(255,255,255,.08);box-shadow:0 10px 28px rgba(0,0,0,.35)}
 .app.dark .brand h1 .ya{color:#FF6B6B}
 .app.dark .brand small{color:#B4ABC3;opacity:1}
@@ -303,7 +303,7 @@ html.tagya-dark,body.tagya-dark{background:#16131e;color:#F3F1F8}
   radial-gradient(circle at 20% 10%,#efeaff 0,transparent 45%),
   radial-gradient(circle at 90% 90%,#e9f7f1 0,transparent 50%),var(--bg);
   border-bottom:1px solid var(--line)}
-.app.dark .m-stage{background:#1b1726;border-color:var(--line)}
+.app.dark .m-stage{background:#16131e;border-color:var(--line)}
 .m-stage .stage-wrap{padding:16px 12px;min-height:0}
 .m-panel{padding:18px 16px}
 .m-panel .rail,.m-panel .inspector{border:none;padding:0;overflow:visible;max-height:none;background:transparent}

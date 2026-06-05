@@ -9,7 +9,7 @@ import { BleManager, ScanMode } from 'react-native-ble-plx';
 import * as Updates from 'expo-updates';
 
 const EDITOR_URL = 'https://tagya.netlify.app';
-const BRAND_DARK = '#0C0A14';
+const BRAND_DARK = '#16131e';
 // Cache-bust por inicialização: o WKWebView preserva o NSURLCache entre updates do
 // TestFlight e pode servir um index.html velho. Um parâmetro único por launch força
 // o WebView a buscar o HTML novo (o JS é hasheado, então continua cacheado por URL).

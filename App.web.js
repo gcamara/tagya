@@ -133,7 +133,7 @@ export default function App() {
       theme.setAttribute('name', 'theme-color')
       document.head.appendChild(theme)
     }
-    theme.setAttribute('content', dark ? '#0C0A14' : '#7c4dff')
+    theme.setAttribute('content', dark ? '#16131e' : '#7c4dff')
   }, [dark])
 
   useEffect(() => {
