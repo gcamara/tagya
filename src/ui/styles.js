@@ -277,6 +277,10 @@ html.tagya-dark,body.tagya-dark{background:#16131e;color:#F3F1F8}
 .app.dark .body,
 .app.dark .mbody,
 .app.dark .m-panel{background:#16131e}
+/* No mobile o rail/inspector vivem dentro do .m-panel e devem ser transparentes;
+   sem isto a regra .app.dark .rail (mais especifica) pinta um bloco #211c2b sobre o fundo. */
+.app.dark .m-panel .rail,
+.app.dark .m-panel .inspector{background:transparent}
 
 /* ---- Nome da etiqueta (topbar) ---- */
 .name-input{margin-left:12px;border:none;border-radius:8px;padding:7px 12px;font-size:14px;font-weight:600;width:220px}
