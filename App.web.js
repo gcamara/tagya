@@ -19,7 +19,7 @@ import BatchModal from './src/ui/BatchModal.js'
 import BrandIcon from './src/ui/BrandIcon.js'
 import SettingsModal from './src/ui/SettingsModal.js'
 import {
-  Plus, Shapes, SlidersHorizontal, Save, Printer, MoreHorizontal,
+  Plus, SlidersHorizontal, Save, Printer, MoreHorizontal,
   Type, QrCode, Barcode, Star, Square, Minus, ImageIcon,
   FilePlus2, Sparkles, FolderOpen, Download, Moon, Sun,
   Undo2, Redo2, Calendar, Table, Rows, Settings
@@ -62,8 +62,9 @@ export default function App() {
   const [toast, setToast] = useState(null)
   const [dark, setDark] = useState(false)
   const [vw, setVw] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1200))
-  const [mobileTab, setMobileTab] = useState('tools') // tools | editar
+  const [mobileTab, setMobileTab] = useState('none') // none | editar (folha do inspetor no mobile)
   const [showActions, setShowActions] = useState(false)
+  const [showAdd, setShowAdd] = useState(false) // bandeja "Elementos" (mobile)
   const isMobile = vw < 860
 
   const [zoom, setZoom] = useState(1)
@@ -469,7 +470,7 @@ export default function App() {
           <h3>{g.name}</h3>
           <div className="add-grid">
             {g.items.map((it) => (
-              <button key={it.type} className="add-btn" onClick={() => { addEl(it.type); if (isMobile) setMobileTab('editar') }}>
+              <button key={it.type} className="add-btn" onClick={() => { addEl(it.type); if (isMobile) { setShowAdd(false); setMobileTab('editar') } }}>
                 <span className="add-ico"><it.Icon size={20} strokeWidth={2} /></span>
                 <span className="add-lbl">{it.label}</span>
               </button>
@@ -485,18 +486,20 @@ export default function App() {
     </>
   )
 
-  // No mobile, selecionar um elemento na etiqueta abre a aba "Editar" (folha flutuante).
+  // No mobile, selecionar um elemento mostra a barra flutuante sobre ele (o canvas é o
+  // protagonista). O painel completo (Editar) abre só sob demanda, pela nav inferior.
   function selectFromStage(id, additive) {
     selectEl(id, additive)
-    if (isMobile && id != null) setMobileTab('editar')
   }
   const stage = <Stage template={template} scale={scale} zoom={zoom} onZoom={setZoom} selId={selId} selIds={selIds} onSelect={selectFromStage} onChange={updateEl} onBeginChange={() => pushHistory()} />
   const multiSel = selIds.length > 1 ? { count: selIds.length, onAlign: alignSelected, onRemove: removeSelected, onDistribute: distributeSelected } : null
   const inspector = <Inspector el={sel} multi={multiSel} index={template.elements.findIndex((e) => e.id === selId)} count={template.elements.length} onUpdate={editEl} onRemove={removeEl} onImageFile={onImageFile} onDuplicate={duplicateEl} onReorder={reorderEl} onAlign={alignEl} />
 
   // Stage + camada de overlays (barra de contexto e edição inline) ancorados nele.
-  // Mostra a barra só com 1 selecionado, sem arraste e fora da edição inline.
-  const showToolbar = !!sel && selIds.length <= 1 && !dragging && !editId
+  // Mostra a barra só com 1 selecionado, sem arraste, fora da edição inline e sem a
+  // folha do inspetor aberta (no mobile uma coisa de cada vez).
+  const sheetOpen = isMobile && mobileTab === 'editar' && (!!sel || !!multiSel)
+  const showToolbar = !!sel && selIds.length <= 1 && !dragging && !editId && !sheetOpen
   const stageHost = (
     <div className="stage-host" ref={stageHostRef}>
       {stage}
@@ -520,12 +523,22 @@ export default function App() {
           onCancel={() => setEditId(null)}
         />
       )}
+      {isMobile && (
+        <div className="zoomctl">
+          <button className="zc-btn" onClick={() => setZoom((z) => clamp(+(z - 0.2).toFixed(2), 0.5, 4))} aria-label="Diminuir zoom"><Minus size={16} /></button>
+          <button className="zc-fit" onClick={() => setZoom(1)} title="Ajustar à tela">{Math.round(zoom * 100)}%</button>
+          <button className="zc-btn" onClick={() => setZoom((z) => clamp(+(z + 0.2).toFixed(2), 0.5, 4))} aria-label="Aumentar zoom"><Plus size={16} /></button>
+        </div>
+      )}
+      {isMobile && template.elements.length === 0 && (
+        <div className="canvas-empty">Toque em <b>Elementos</b> para começar a etiqueta</div>
+      )}
     </div>
   )
 
   const NAV = [
-    { id: 'tools', Icon: Shapes, label: 'Elementos', onClick: () => setMobileTab('tools') },
-    { id: 'editar', Icon: SlidersHorizontal, label: 'Editar', onClick: () => setMobileTab('editar') },
+    { id: 'add', Icon: Plus, label: 'Elementos', onClick: () => setShowAdd(true) },
+    { id: 'editar', Icon: SlidersHorizontal, label: 'Editar', onClick: () => { if (sel || multiSel) setMobileTab((t) => (t === 'editar' ? 'none' : 'editar')); else flash('Toque num elemento para editar') } },
     { id: 'save', Icon: Save, label: 'Salvar', onClick: doSave },
     { id: 'print', Icon: Printer, label: 'Imprimir', onClick: () => setShowPrint(true) },
     { id: 'more', Icon: MoreHorizontal, label: 'Mais', onClick: () => setShowActions(true) }
@@ -582,14 +595,7 @@ export default function App() {
       ) : (
         <div className="mbody">
           <div className="m-stage">{stageHost}</div>
-          <div className="m-panel">
-            {mobileTab === 'tools'
-              ? <div className="rail">{railTools}</div>
-              : (sel || multiSel)
-                ? <p className="empty">Editando na folha abaixo. Toque na etiqueta para selecionar outro elemento.</p>
-                : inspector}
-          </div>
-          <InspectorSheet open={mobileTab === 'editar' && (!!sel || !!multiSel)} onClose={() => { selectEl(null); setMobileTab('tools') }}>
+          <InspectorSheet open={sheetOpen} onClose={() => setMobileTab('none')}>
             {inspector}
           </InspectorSheet>
         </div>
@@ -598,7 +604,7 @@ export default function App() {
       {isMobile && (
         <nav className="mobile-nav">
           {NAV.map((n) => {
-            const active = (n.id === 'tools' && mobileTab === 'tools') || (n.id === 'editar' && mobileTab === 'editar')
+            const active = (n.id === 'add' && showAdd) || (n.id === 'editar' && mobileTab === 'editar')
             return (
               <button key={n.id} className={`mnav-item ${active ? 'active' : ''} ${n.primary ? 'primary' : ''}`} onClick={n.onClick}>
                 <span className="mnav-ico"><n.Icon size={21} strokeWidth={2.1} /></span>
@@ -607,6 +613,15 @@ export default function App() {
             )
           })}
         </nav>
+      )}
+
+      {isMobile && showAdd && (
+        <div className="overlay overlay-sheet" onClick={() => setShowAdd(false)}>
+          <div className="sheet add-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-grip" />
+            <div className="add-tray">{railTools}</div>
+          </div>
+        </div>
       )}
 
       {isMobile && showActions && (

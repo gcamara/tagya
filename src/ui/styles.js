@@ -291,27 +291,29 @@ html.tagya-dark,body.tagya-dark{background:#16131e;color:#F3F1F8}
   .body{grid-template-columns:200px 1fr 250px}
 }
 
-/* ====== MOBILE (< 860px): documento rolável + navbar inferior ====== */
+/* ====== MOBILE (< 860px): canvas em tela cheia (o canvas é o protagonista) ====== */
 @media (max-width:860px){
-  html,body,#root{height:auto;min-height:100%;overflow:visible}
+  html,body,#root{height:100%;min-height:0;overflow:hidden}
 }
-.app.is-mobile{height:auto;min-height:100vh;overflow:visible;display:block}
-.app.is-mobile .topbar{position:sticky;top:0;z-index:20;padding:calc(9px + env(safe-area-inset-top)) 12px 9px;gap:10px}
+/* App vira uma coluna flex de altura fixa: topbar → barra de conexão → canvas (flex:1)
+   → navbar inferior fixa. Nada de painel permanente roubando a tela do canvas. */
+.app.is-mobile{height:100vh;height:100dvh;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.app.is-mobile .topbar{flex-shrink:0;z-index:20;padding:calc(9px + env(safe-area-inset-top)) 12px 9px;gap:10px}
+.app.is-mobile .conn-bar{flex-shrink:0}
 .app.is-mobile .brand small{display:none}
 .app.is-mobile .name-input{margin-left:0;flex:1 1 80px;min-width:70px;width:auto}
 .tb-mobile-hist{display:flex;gap:5px;flex-shrink:0}
 .tb-mobile-hist .btn.icon-only{width:34px;padding:7px}
 
-.mbody{padding-bottom:84px}
-.m-stage{position:sticky;top:calc(54px + env(safe-area-inset-top));z-index:9;background:
+.app.is-mobile .mbody{flex:1;min-height:0;display:flex;flex-direction:column;padding:0}
+.m-stage{flex:1;min-height:0;display:flex;background:
   radial-gradient(circle at 20% 10%,#efeaff 0,transparent 45%),
-  radial-gradient(circle at 90% 90%,#e9f7f1 0,transparent 50%),var(--bg);
-  border-bottom:1px solid var(--line)}
-.app.dark .m-stage{background:#16131e;border-color:var(--line)}
-.m-stage .stage-wrap{padding:16px 12px;min-height:0}
-.m-panel{padding:18px 16px}
-.m-panel .rail,.m-panel .inspector{border:none;padding:0;overflow:visible;max-height:none;background:transparent}
-.m-panel .rail h3:first-child{margin-top:0}
+  radial-gradient(circle at 90% 90%,#e9f7f1 0,transparent 50%),var(--bg)}
+.app.dark .m-stage{background:#16131e}
+/* o canvas-workspace ocupa toda a altura e centraliza a etiqueta; padding inferior
+   abre espaço para a navbar flutuante não cobrir a peça. */
+.app.is-mobile .stage-host{display:flex;flex-direction:column;height:100%}
+.m-stage .stage-wrap{padding:18px 14px calc(98px + env(safe-area-inset-bottom));min-height:0}
 
 @media (max-width:860px){
   .add-grid{grid-template-columns:repeat(4,1fr)}
@@ -413,7 +415,30 @@ html.tagya-dark,body.tagya-dark{background:#16131e;color:#F3F1F8}
    original (scroll/centralização). position:relative ancora os overlays. */
 .stage-host{position:relative;min-width:0;min-height:0;display:flex;flex-direction:column}
 .stage-host>.stage-wrap{flex:1;min-height:0;width:100%}
-.app.is-mobile .stage-host{display:block}
+.app.is-mobile .stage-host{height:100%}
+
+/* ---- Controle de zoom (mobile): +/− e ajustar, num canto do palco ---- */
+.zoomctl{position:absolute;right:12px;bottom:calc(104px + env(safe-area-inset-bottom));z-index:25;
+  display:flex;align-items:center;gap:1px;background:var(--panel);border:1px solid var(--line);
+  border-radius:22px;box-shadow:0 4px 16px rgba(60,40,90,.20);padding:3px}
+.zoomctl .zc-btn{width:34px;height:34px;border:none;background:transparent;color:var(--ink);
+  display:grid;place-items:center;border-radius:50%;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.zoomctl .zc-btn:active{background:var(--accent-soft);color:var(--accent)}
+.zoomctl .zc-fit{min-width:48px;border:none;background:transparent;color:var(--accent);
+  font-family:inherit;font-weight:800;font-size:12px;cursor:pointer;padding:0 4px}
+.app.dark .zoomctl{background:#221c2b}
+
+/* ---- Estado vazio do canvas (mobile) ---- */
+.canvas-empty{position:absolute;left:0;right:0;top:46%;transform:translateY(-50%);z-index:5;
+  text-align:center;color:var(--muted);font-size:13.5px;line-height:1.5;padding:0 32px;pointer-events:none}
+.canvas-empty b{color:var(--accent)}
+
+/* ---- Bandeja "Elementos" (sheet de adicionar, mobile) ---- */
+.add-sheet{max-height:78vh}
+.add-tray{max-height:64vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.add-tray h3{font-size:12px;margin:14px 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.add-tray h3:first-child{margin-top:2px}
+.add-tray .btn{margin-top:2px}
 
 /* ---- Barra flutuante de contexto (1 elemento selecionado) ---- */
 .ftb{position:absolute;z-index:30;display:flex;align-items:center;gap:2px;
