@@ -1,0 +1,16 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="1024" height="1024" rx="225.28" ry="225.28" fill="#14121C"></rect>
+  <g transform="translate(199.68 204.8) scale(5.12)">
+    <defs>
+        <linearGradient id="tgGradCappn5lg" x1="0.146" y1="0.146" x2="0.854" y2="0.854">
+          <stop offset="0" stop-color="#7C5CFF"></stop>
+          <stop offset="1" stop-color="#FF6B6B"></stop>
+        </linearGradient>
+      <mask id="tgMaskCappn5lg" maskUnits="userSpaceOnUse" x="0" y="0" width="120" height="120">
+        <path d="M44 20 H92 a16 16 0 0 1 16 16 V84 a16 16 0 0 1 -16 16 H44 L14 60 Z" fill="#fff"></path>
+        <circle cx="28" cy="60" r="4.8" fill="#000"></circle>
+        <text x="71" y="61" fill="#000" font-family="&#39;Baloo 2&#39;, sans-serif" font-weight="800" font-size="47" letter-spacing="-1" text-anchor="middle" dominant-baseline="central">Ya</text>
+      </mask>
+    </defs>
+    <path d="M44 20 H92 a16 16 0 0 1 16 16 V84 a16 16 0 0 1 -16 16 H44 L14 60 Z" fill="url(#tgGradCappn5lg)" mask="url(#tgMaskCappn5lg)"></path></g>
+</svg>

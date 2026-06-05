@@ -3,12 +3,13 @@
 // WebView (o código web que já funciona); o nativo só faz scan/connect/write/notify.
 // A versão web (PWA) usa App.web.js — este arquivo não entra no bundle web.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, PermissionsAndroid, Platform, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, PermissionsAndroid, Platform, StatusBar, StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { BleManager, ScanMode } from 'react-native-ble-plx';
 import * as Updates from 'expo-updates';
 
 const EDITOR_URL = 'https://tagya.netlify.app';
+const BRAND_DARK = '#0C0A14';
 // Cache-bust por inicialização: o WKWebView preserva o NSURLCache entre updates do
 // TestFlight e pode servir um index.html velho. Um parâmetro único por launch força
 // o WebView a buscar o HTML novo (o JS é hasheado, então continua cacheado por URL).
@@ -203,7 +204,7 @@ export default function App() {
 
   return (
     <View style={styles.fill}>
-      <StatusBar barStyle="light-content" backgroundColor="#7c4dff" />
+      <StatusBar barStyle="light-content" backgroundColor={BRAND_DARK} />
       <WebView
         ref={webRef}
         source={{ uri: EDITOR_URL_FRESH }}
@@ -215,10 +216,11 @@ export default function App() {
         onLoadEnd={() => setLoading(false)}
         allowsInlineMediaPlayback
         style={styles.fill}
+        containerStyle={styles.fill}
       />
       {loading && (
         <View style={styles.loader}>
-          <View style={styles.logo}><Text style={styles.logoText}>Ya</Text></View>
+          <Image source={require('./assets/C-appicon-dark.png')} style={styles.logo} resizeMode="contain" />
           <ActivityIndicator color="#fff" style={{ marginTop: 16 }} />
         </View>
       )}
@@ -227,8 +229,7 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: '#7c4dff' },
-  loader: { ...StyleSheet.absoluteFillObject, backgroundColor: '#7c4dff', alignItems: 'center', justifyContent: 'center' },
-  logo: { width: 72, height: 72, borderRadius: 20, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
-  logoText: { color: '#7c4dff', fontSize: 30, fontWeight: '800', letterSpacing: -1 },
+  fill: { flex: 1, backgroundColor: BRAND_DARK },
+  loader: { ...StyleSheet.absoluteFillObject, backgroundColor: BRAND_DARK, alignItems: 'center', justifyContent: 'center' },
+  logo: { width: 78, height: 78, borderRadius: 18 },
 });

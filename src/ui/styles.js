@@ -10,6 +10,7 @@ export const CSS = `
 *{box-sizing:border-box}
 html,body,#root{height:100%}
 body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink)}
+html.tagya-dark,body.tagya-dark{background:#0C0A14;color:#F3F1F8}
 .app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
 
 .topbar{display:flex;align-items:center;gap:14px;padding:calc(10px + env(safe-area-inset-top)) 18px 10px;background:linear-gradient(95deg,#7c4dff,#b388ff);color:#fff;box-shadow:var(--shadow);z-index:10}
@@ -269,6 +270,13 @@ body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;backgrou
 .app.dark .banner{background:#2e2710;border-color:#5a4a14;color:#e8cd84}
 .app.dark .topbar input{background:#fff;color:#221b2e}
 .app.dark .ph-tag{border-color:var(--line)}
+.app.dark .topbar{background:#0C0A14;color:#F3F1F8;border-bottom:1px solid rgba(255,255,255,.06);box-shadow:none}
+.app.dark .brand .logo{background:#14121C;border:1px solid rgba(255,255,255,.08);box-shadow:0 10px 28px rgba(0,0,0,.35)}
+.app.dark .brand h1 .ya{color:#FF6B6B}
+.app.dark .brand small{color:#B4ABC3;opacity:1}
+.app.dark .body,
+.app.dark .mbody,
+.app.dark .m-panel{background:#16131e}
 
 /* ---- Nome da etiqueta (topbar) ---- */
 .name-input{margin-left:12px;border:none;border-radius:8px;padding:7px 12px;font-size:14px;font-weight:600;width:220px}

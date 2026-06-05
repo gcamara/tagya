@@ -124,6 +124,19 @@ export default function App() {
   useEffect(() => { setSaved(listTemplates()); setDark(!!loadPrefs().dark) }, [])
 
   useEffect(() => {
+    if (typeof document === 'undefined') return
+    document.documentElement.classList.toggle('tagya-dark', dark)
+    document.body.classList.toggle('tagya-dark', dark)
+    let theme = document.querySelector('meta[name="theme-color"]')
+    if (!theme) {
+      theme = document.createElement('meta')
+      theme.setAttribute('name', 'theme-color')
+      document.head.appendChild(theme)
+    }
+    theme.setAttribute('content', dark ? '#0C0A14' : '#7c4dff')
+  }, [dark])
+
+  useEffect(() => {
     const on = () => setVw(window.innerWidth)
     window.addEventListener('resize', on)
     return () => window.removeEventListener('resize', on)
