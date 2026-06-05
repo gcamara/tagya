@@ -32,6 +32,11 @@ import { GAME_ICONS, GAME_VB } from './gameData.js'
 import { ANIMALS_ICONS, ANIMALS_VB } from './animalsData.js'
 import { HOME_ICONS, HOME_VB } from './homeData.js'
 
+// Infra do backend remoto (Fase 1). Sem Supabase configurado em remoteConfig.js,
+// `remoteEnabled()` é false e nada disto roda — usa só os dados embarcados acima.
+import { remoteEnabled, manifestUrl, libUrl } from './remoteConfig.js'
+import { getLib, putLib, prune } from './iconCache.js'
+
 const N = (v) => parseFloat(v) || 0
 const has2D = () => typeof Path2D !== 'undefined'
 
@@ -99,32 +104,110 @@ function faPaths(icons) { // key -> {w,h,p}; viewBox w×h centralizado
   }
 }
 
-// ---- loaders (dados já no bundle → fábrica de desenho, resolvida na hora) ----
-const LOADERS = {
-  lucide: () => Promise.resolve(strokeNodes(LUCIDE_NODES)),
-  tabler: () => Promise.resolve(strokeNodes(TABLER_NODES)),
-  mdi: () => Promise.resolve(singlePaths(MDI_PATHS)),
-  fa: () => Promise.resolve(faPaths(FA_ICONS)),
-  bootstrap: () => Promise.resolve(fillPaths(BS_ICONS, BS_VB)),
-  phosphor: () => Promise.resolve(fillPaths(PH_ICONS, PH_VB)),
-  remix: () => Promise.resolve(fillPaths(REMIX_ICONS, REMIX_VB)),
-  hero: () => Promise.resolve(fillPaths(HERO_ICONS, HERO_VB)),
-  brands: () => Promise.resolve(fillPaths(BRANDS_ICONS, BRANDS_VB)),
-  game: () => Promise.resolve(fillPaths(GAME_ICONS, GAME_VB)),
-  animals: () => Promise.resolve(fillPaths(ANIMALS_ICONS, ANIMALS_VB)),
-  home: () => Promise.resolve(fillPaths(HOME_ICONS, HOME_VB))
+// Reconstrói a função de desenho a partir de um payload genérico {kind, vb?, data}.
+// Mesmo formato usado tanto pelos dados embarcados quanto pelo JSON remoto, de
+// modo que bundled e remoto produzam EXATAMENTE a mesma fábrica.
+function buildDrawFn(kind, vb, data) {
+  switch (kind) {
+    case 'strokeNodes': return strokeNodes(data)
+    case 'singlePaths': return singlePaths(data)
+    case 'faPaths': return faPaths(data)
+    case 'fillPaths': return fillPaths(data, vb)
+    default: return null
+  }
+}
+
+// ---- payloads EMBARCADOS (fallback offline garantido) ----
+// id -> { kind, vb?, data }. É a fonte de verdade do formato que o conversor
+// (scripts/convert-icons-to-json.mjs) reproduz para o JSON remoto.
+const BUNDLED = {
+  lucide: { kind: 'strokeNodes', data: LUCIDE_NODES },
+  tabler: { kind: 'strokeNodes', data: TABLER_NODES },
+  mdi: { kind: 'singlePaths', data: MDI_PATHS },
+  fa: { kind: 'faPaths', data: FA_ICONS },
+  bootstrap: { kind: 'fillPaths', vb: BS_VB, data: BS_ICONS },
+  phosphor: { kind: 'fillPaths', vb: PH_VB, data: PH_ICONS },
+  remix: { kind: 'fillPaths', vb: REMIX_VB, data: REMIX_ICONS },
+  hero: { kind: 'fillPaths', vb: HERO_VB, data: HERO_ICONS },
+  brands: { kind: 'fillPaths', vb: BRANDS_VB, data: BRANDS_ICONS },
+  game: { kind: 'fillPaths', vb: GAME_VB, data: GAME_ICONS },
+  animals: { kind: 'fillPaths', vb: ANIMALS_VB, data: ANIMALS_ICONS },
+  home: { kind: 'fillPaths', vb: HOME_VB, data: HOME_ICONS }
 }
 
 const DRAW = { etiqya: (c, k, x, y, s) => drawEtiqya(c, k, x, y, s) }
 const pending = {}
 const listeners = new Set()
 
+function bundledFn(id) {
+  const b = BUNDLED[id]
+  return b ? buildDrawFn(b.kind, b.vb, b.data) : null
+}
+
+// Resolve o payload {kind, vb?, data} de uma lib seguindo a cadeia:
+//   (a) cache em memória  -> tratada antes desta fn (DRAW[id])
+//   (b) cache persistente (IndexedDB)
+//   (c) fetch remoto (Supabase Storage) — só se configurado
+//   (d) FALLBACK embarcado (*Data.js)
+// Sem Supabase configurado, vai direto para (d): comportamento idêntico ao de hoje.
+async function resolveLib(id) {
+  if (!remoteEnabled()) return bundledFn(id)
+
+  let version = null
+  try {
+    const mUrl = manifestUrl()
+    if (mUrl) {
+      const res = await fetch(mUrl, { cache: 'no-cache' })
+      if (res && res.ok) {
+        const manifest = await res.json()
+        if (manifest && manifest[id] != null) version = manifest[id]
+      }
+    }
+  } catch (_) { /* sem manifest -> tenta cache/bundled abaixo */ }
+
+  // (b) cache persistente para a versão alvo
+  if (version != null) {
+    try {
+      const cached = await getLib(id, version)
+      if (cached && cached.kind) {
+        const fn = buildDrawFn(cached.kind, cached.vb, cached.data)
+        if (fn) return fn
+      }
+    } catch (_) { /* ignora */ }
+  }
+
+  // (c) fetch remoto
+  try {
+    const url = libUrl(id)
+    if (url) {
+      const res = await fetch(url, { cache: 'no-cache' })
+      if (res && res.ok) {
+        const payload = await res.json()
+        if (payload && payload.kind) {
+          const fn = buildDrawFn(payload.kind, payload.vb, payload.data)
+          if (fn) {
+            const v = version != null ? version : (payload.version != null ? payload.version : '?')
+            try { await putLib(id, v, payload); prune(id, v) } catch (_) { /* ignora */ }
+            return fn
+          }
+        }
+      }
+    }
+  } catch (_) { /* cai no fallback embarcado */ }
+
+  // (d) fallback embarcado
+  return bundledFn(id)
+}
+
 export function isLibLoaded(id) { return !!DRAW[id] }
 export function ensureLib(id) {
-  if (DRAW[id] || !LOADERS[id]) return Promise.resolve()
+  if (DRAW[id] || !BUNDLED[id]) return Promise.resolve()
   if (!pending[id]) {
-    pending[id] = LOADERS[id]()
-      .then((fn) => { DRAW[id] = fn; delete pending[id]; listeners.forEach((f) => f(id)) })
+    pending[id] = resolveLib(id)
+      .then((fn) => {
+        if (!fn) { delete pending[id]; return }
+        DRAW[id] = fn; delete pending[id]; listeners.forEach((f) => f(id))
+      })
       .catch(() => { delete pending[id] })
   }
   return pending[id]
