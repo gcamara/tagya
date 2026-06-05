@@ -406,7 +406,63 @@ html.tagya-dark,body.tagya-dark{background:#16131e;color:#F3F1F8}
 .orn-opt:hover{border-color:var(--accent-2)}
 .orn-opt.sel{border-color:var(--accent);background:var(--accent-soft)}
 .app.dark .orn-opt{background:#2a2336;color:var(--ink);border-color:var(--line)}
-.app.dark .orn-opt.sel{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}`
+.app.dark .orn-opt.sel{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+
+/* ---- Host de overlays sobre o stage (barra de contexto + edição inline) ---- */
+/* Ocupa a célula central do grid; o .stage-wrap interno mantém o comportamento
+   original (scroll/centralização). position:relative ancora os overlays. */
+.stage-host{position:relative;min-width:0;min-height:0;display:flex;flex-direction:column}
+.stage-host>.stage-wrap{flex:1;min-height:0;width:100%}
+.app.is-mobile .stage-host{display:block}
+
+/* ---- Barra flutuante de contexto (1 elemento selecionado) ---- */
+.ftb{position:absolute;z-index:30;display:flex;align-items:center;gap:2px;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  box-shadow:0 6px 22px rgba(60,40,90,.22);padding:4px;
+  animation:ftbIn .14s ease-out;touch-action:none;-webkit-user-select:none;user-select:none}
+@keyframes ftbIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.ftb-btn{display:grid;place-items:center;width:32px;height:32px;border:none;border-radius:9px;
+  background:transparent;color:var(--ink);cursor:pointer;transition:.13s;padding:0}
+.ftb-btn:hover{background:var(--accent-soft);color:var(--accent)}
+.ftb-btn.danger{color:var(--danger)}
+.ftb-btn.danger:hover{background:#fdecec;color:var(--danger)}
+.ftb-sep{width:1px;height:20px;background:var(--line);margin:0 2px}
+.ftb-swatch{width:16px;height:16px;border-radius:5px;border:1.5px solid var(--ink);background:#fff;display:block}
+.ftb-swatch.on{background:#111;border-color:#111}
+.ftb-color-wrap{position:relative}
+.ftb-pop{position:absolute;top:38px;left:50%;transform:translateX(-50%);z-index:31;
+  background:var(--panel);border:1px solid var(--line);border-radius:11px;
+  box-shadow:0 6px 22px rgba(60,40,90,.22);padding:5px;display:flex;flex-direction:column;gap:3px;min-width:124px}
+.ftb-pop-opt{display:flex;align-items:center;gap:8px;border:1px solid transparent;border-radius:8px;
+  padding:7px 9px;background:transparent;color:var(--ink);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;text-align:left}
+.ftb-pop-opt:hover{background:var(--accent-soft)}
+.ftb-pop-opt.sel{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.app.dark .ftb,.app.dark .ftb-pop{background:#2a2336;border-color:var(--line)}
+.app.dark .ftb-btn{color:var(--ink)}
+.app.dark .ftb-btn:hover{background:var(--accent-soft);color:var(--accent)}
+.app.dark .ftb-swatch{border-color:#f2edf8}
+.app.dark .ftb-swatch.on{background:#f2edf8;border-color:#f2edf8}
+
+/* ---- Edição inline de texto (textarea sobre o rect do elemento) ---- */
+.inline-edit{position:absolute;z-index:28;margin:0;padding:0;border:1.5px solid var(--accent);
+  border-radius:4px;background:rgba(255,255,255,.96);color:#111;resize:none;overflow:hidden;
+  box-shadow:0 0 0 2px rgba(124,77,255,.18);outline:none;font-family:inherit;white-space:pre-wrap;
+  box-sizing:border-box;-webkit-user-select:text;user-select:text}
+.inline-edit:focus{outline:none}
+
+/* ---- Inspector como bottom-sheet (só mobile) ---- */
+.isheet{position:fixed;left:0;right:0;bottom:0;z-index:45;display:flex;flex-direction:column;
+  background:var(--panel);border-top:1px solid var(--line);
+  border-radius:20px 20px 0 0;box-shadow:0 -10px 34px rgba(60,40,90,.28);
+  animation:isheetUp .22s ease-out;touch-action:none}
+@keyframes isheetUp{from{transform:translateY(40px);opacity:.4}to{transform:translateY(0);opacity:1}}
+.isheet-grip-zone{flex-shrink:0;padding:9px 0 6px;cursor:grab;touch-action:none;display:grid;place-items:center}
+.isheet-grip-zone:active{cursor:grabbing}
+.isheet-grip{width:44px;height:5px;border-radius:3px;background:var(--line)}
+.isheet-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:2px 16px calc(18px + env(safe-area-inset-bottom));touch-action:auto}
+.isheet-body .inspector{border:none;padding:0;background:transparent;overflow:visible;max-height:none}
+.app.dark .isheet{background:var(--panel);border-color:var(--line)}`
 
 export function injectStyles() {
   if (typeof document === 'undefined') return

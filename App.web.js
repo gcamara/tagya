@@ -7,6 +7,9 @@ import { exportTemplatePNG } from './src/lib/exportImage.js'
 import { bluetoothSupported } from './src/lib/niimbot.js'
 import Stage from './src/ui/Stage.js'
 import Inspector from './src/ui/Inspector.js'
+import FloatingToolbar from './src/ui/FloatingToolbar.js'
+import InlineTextEditor from './src/ui/InlineTextEditor.js'
+import InspectorSheet from './src/ui/InspectorSheet.js'
 import PrintModal from './src/ui/PrintModal.js'
 import TemplatesModal from './src/ui/TemplatesModal.js'
 import StarterModal from './src/ui/StarterModal.js'
@@ -72,6 +75,84 @@ export default function App() {
   }, [template.widthMm, vw])
   const scale = baseScale * zoom
   const sel = template.elements.find((e) => e.id === selId) || null
+
+  // ---- Overlays sobre o stage (barra flutuante + edição inline) ----
+  // stageHostRef envolve o <Stage>; medimos o offset do .stage dentro dele para
+  // posicionar a barra/textarea em px relativos ao host (sem tocar no Stage.js).
+  const stageHostRef = useRef(null)
+  const [stageBox, setStageBox] = useState({ left: 0, top: 0, width: 0, height: 0 })
+  const [dragging, setDragging] = useState(false)
+  const [editId, setEditId] = useState(null) // id do texto em edição inline
+
+  // Mede a posição do .stage relativo ao host (recalcula em mudanças de layout).
+  function measureStage() {
+    const host = stageHostRef.current
+    if (!host) return
+    const stageEl = host.querySelector('.stage')
+    const next = stageEl
+      ? (() => { const hr = host.getBoundingClientRect(), sr = stageEl.getBoundingClientRect(); return { left: sr.left - hr.left, top: sr.top - hr.top, width: sr.width, height: sr.height } })()
+      : { left: 0, top: 0, width: 0, height: 0 }
+    // Só atualiza se mudou de fato — evita loop de render (este efeito roda a cada render).
+    setStageBox((p) => (Math.abs(p.left - next.left) < 0.5 && Math.abs(p.top - next.top) < 0.5 && Math.abs(p.width - next.width) < 0.5 && Math.abs(p.height - next.height) < 0.5 ? p : next))
+  }
+  useEffect(() => { measureStage() }) // após cada render (template/scale/seleção)
+  useEffect(() => {
+    const on = () => measureStage()
+    window.addEventListener('resize', on)
+    window.addEventListener('scroll', on, true)
+    return () => { window.removeEventListener('resize', on); window.removeEventListener('scroll', on, true) }
+  }, [])
+
+  // Esconde a barra enquanto arrasta/redimensiona (pointerdown numa alça do stage).
+  useEffect(() => {
+    const host = stageHostRef.current
+    if (!host) return
+    const down = (e) => { if (e.target.closest && e.target.closest('.de-handle')) setDragging(true) }
+    const up = () => setDragging(false)
+    host.addEventListener('pointerdown', down)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+    return () => { host.removeEventListener('pointerdown', down); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up) }
+  }, [])
+
+  // Duplo clique/toque num elemento de texto → edição inline no lugar.
+  useEffect(() => {
+    const host = stageHostRef.current
+    if (!host) return
+    const dbl = (e) => {
+      const h = e.target.closest && e.target.closest('.de-handle')
+      if (!h) return
+      // descobre qual elemento pelo rect (o Stage não expõe id); casa pela posição
+      const sr = host.querySelector('.stage')?.getBoundingClientRect()
+      if (!sr) return
+      const hr = h.getBoundingClientRect()
+      const mmX = (hr.left - sr.left) / scale, mmY = (hr.top - sr.top) / scale
+      const el = templateRef.current.elements.find((x) => Math.abs(x.x - mmX) < 0.6 && Math.abs(x.y - mmY) < 0.6)
+      if (el && el.type === 'text') { e.preventDefault(); setSelId(el.id); setSelIds([el.id]); setEditId(el.id) }
+    }
+    host.addEventListener('dblclick', dbl)
+    return () => host.removeEventListener('dblclick', dbl)
+  }, [scale])
+
+  // Sai da edição inline se o elemento deixar de existir ou de ser texto.
+  useEffect(() => {
+    if (!editId) return
+    const el = template.elements.find((e) => e.id === editId)
+    if (!el || el.type !== 'text') setEditId(null)
+  }, [editId, template])
+
+  // Rect do elemento `el` em px relativos ao host (offset do stage + x/y/w/h * escala).
+  function elRect(el) {
+    if (!el) return null
+    return {
+      left: stageBox.left + (el.x || 0) * scale,
+      top: stageBox.top + (el.y || 0) * scale,
+      width: (el.w || 2) * scale,
+      height: (el.h || 2) * scale
+    }
+  }
+  function commitInline(id, text) { editEl(id, { text }); setEditId(null) }
+  const editEl_target = editId ? template.elements.find((e) => e.id === editId) : null
 
   // ---- Histórico (desfazer/refazer) ----
   // templateRef segue o template atual para que pushHistory tire o snapshot certo
@@ -404,9 +485,43 @@ export default function App() {
     </>
   )
 
-  const stage = <Stage template={template} scale={scale} zoom={zoom} onZoom={setZoom} selId={selId} selIds={selIds} onSelect={selectEl} onChange={updateEl} onBeginChange={() => pushHistory()} />
+  // No mobile, selecionar um elemento na etiqueta abre a aba "Editar" (folha flutuante).
+  function selectFromStage(id, additive) {
+    selectEl(id, additive)
+    if (isMobile && id != null) setMobileTab('editar')
+  }
+  const stage = <Stage template={template} scale={scale} zoom={zoom} onZoom={setZoom} selId={selId} selIds={selIds} onSelect={selectFromStage} onChange={updateEl} onBeginChange={() => pushHistory()} />
   const multiSel = selIds.length > 1 ? { count: selIds.length, onAlign: alignSelected, onRemove: removeSelected, onDistribute: distributeSelected } : null
   const inspector = <Inspector el={sel} multi={multiSel} index={template.elements.findIndex((e) => e.id === selId)} count={template.elements.length} onUpdate={editEl} onRemove={removeEl} onImageFile={onImageFile} onDuplicate={duplicateEl} onReorder={reorderEl} onAlign={alignEl} />
+
+  // Stage + camada de overlays (barra de contexto e edição inline) ancorados nele.
+  // Mostra a barra só com 1 selecionado, sem arraste e fora da edição inline.
+  const showToolbar = !!sel && selIds.length <= 1 && !dragging && !editId
+  const stageHost = (
+    <div className="stage-host" ref={stageHostRef}>
+      {stage}
+      {showToolbar && (
+        <FloatingToolbar
+          rect={elRect(sel)}
+          bounds={stageBox}
+          el={sel}
+          onDuplicate={duplicateEl}
+          onReorder={reorderEl}
+          onRemove={removeEl}
+          onSetFill={(id, v) => editEl(id, { fill: v })}
+        />
+      )}
+      {editEl_target && (
+        <InlineTextEditor
+          rect={elRect(editEl_target)}
+          el={editEl_target}
+          scale={scale}
+          onCommit={commitInline}
+          onCancel={() => setEditId(null)}
+        />
+      )}
+    </div>
+  )
 
   const NAV = [
     { id: 'tools', Icon: Shapes, label: 'Elementos', onClick: () => setMobileTab('tools') },
@@ -461,15 +576,22 @@ export default function App() {
       {!isMobile ? (
         <div className="body">
           <aside className="rail">{railTools}</aside>
-          {stage}
+          {stageHost}
           {inspector}
         </div>
       ) : (
         <div className="mbody">
-          <div className="m-stage">{stage}</div>
+          <div className="m-stage">{stageHost}</div>
           <div className="m-panel">
-            {mobileTab === 'tools' ? <div className="rail">{railTools}</div> : inspector}
+            {mobileTab === 'tools'
+              ? <div className="rail">{railTools}</div>
+              : (sel || multiSel)
+                ? <p className="empty">Editando na folha abaixo. Toque na etiqueta para selecionar outro elemento.</p>
+                : inspector}
           </div>
+          <InspectorSheet open={mobileTab === 'editar' && (!!sel || !!multiSel)} onClose={() => { selectEl(null); setMobileTab('tools') }}>
+            {inspector}
+          </InspectorSheet>
         </div>
       )}
 
