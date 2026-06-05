@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { LIBRARIES, getLibrary, drawLibIcon, libIconCount } from '../lib/icons/index.js'
-import { FONTS, DEFAULT_FONT, DATE_FORMATS } from '../lib/labelTemplate.js'
+import { FONTS, DEFAULT_FONT, DATE_FORMATS, BARCODE_FORMATS } from '../lib/labelTemplate.js'
 import { ORNAMENT_CATEGORIES, ORNAMENT_COUNT, drawOrnament } from '../lib/ornaments.js'
 import { useIconLib } from './useIconLib.js'
 import { Trash2, Copy, BringToFront, SendToBack, ChevronUp, ChevronDown } from './icons.js'
@@ -55,7 +55,29 @@ const ALIGN_TITLE = {
   left: 'esquerda', center: 'centro', right: 'direita', top: 'topo', middle: 'meio', bottom: 'base'
 }
 
-export default function Inspector({ el, index = -1, count = 0, onUpdate, onRemove, onImageFile, onDuplicate, onReorder, onAlign }) {
+export default function Inspector({ el, multi, index = -1, count = 0, onUpdate, onRemove, onImageFile, onDuplicate, onReorder, onAlign }) {
+  if (multi) {
+    return (
+      <div className="inspector">
+        <div className="ins-head">
+          <h3 style={{ margin: 0 }}>{multi.count} selecionados</h3>
+          <span className="tag">grupo</span>
+        </div>
+        <p className="empty" style={{ marginTop: 0 }}>Arraste para mover todos juntos · setas para ajustar · Delete para remover. Shift+clique adiciona/remove da seleção.</p>
+        <div className="field">
+          <label>Alinhar todos na etiqueta</label>
+          <div className="align-grid">
+            {ALIGN_CELLS.map(([h, v]) => (
+              <button key={h + v} className="align-cell" title={`Alinhar: ${ALIGN_TITLE[h]} · ${ALIGN_TITLE[v]}`} onClick={() => multi.onAlign(h, v)}>
+                <span className={`align-dot h-${h} v-${v}`} />
+              </button>
+            ))}
+          </div>
+        </div>
+        <button className="btn danger" style={{ width: '100%', marginTop: 6, justifyContent: 'center' }} onClick={multi.onRemove}><Trash2 size={15} /> Remover {multi.count} elementos</button>
+      </div>
+    )
+  }
   if (!el) {
     return (
       <div className="inspector">
@@ -113,6 +135,16 @@ export default function Inspector({ el, index = -1, count = 0, onUpdate, onRemov
         </div>
       )}
 
+      <div className="field">
+        <label>Rotação · {Math.round(el.rot || 0)}°</label>
+        <div className="rot-row">
+          <input type="range" min="0" max="360" step="1" value={el.rot || 0} onChange={(e) => set({ rot: Number(e.target.value) })} />
+          {[0, 90, 180, 270].map((d) => (
+            <button key={d} className={`rot-q ${(el.rot || 0) === d ? 'sel' : ''}`} onClick={() => set({ rot: d })}>{d}°</button>
+          ))}
+        </div>
+      </div>
+
       {el.type === 'text' && (
         <div className="field">
           <label>Texto</label>
@@ -125,6 +157,18 @@ export default function Inspector({ el, index = -1, count = 0, onUpdate, onRemov
           <label>Conteúdo {el.type === 'qr' ? '(URL ou texto)' : '(números/letras)'}</label>
           <input type="text" value={el.text || ''} onChange={(e) => set({ text: e.target.value })} />
         </div>
+      )}
+
+      {el.type === 'barcode' && (
+        <>
+          <div className="field">
+            <label>Formato</label>
+            <select value={el.barFormat || 'CODE128'} onChange={(e) => set({ barFormat: e.target.value })}>
+              {BARCODE_FORMATS.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
+          </div>
+          <label className="check"><input type="checkbox" checked={!!el.barText} onChange={(e) => set({ barText: e.target.checked })} /> Mostrar números</label>
+        </>
       )}
 
       {el.type === 'date' && (
@@ -205,10 +249,26 @@ export default function Inspector({ el, index = -1, count = 0, onUpdate, onRemov
       {el.type === 'ornament' && <OrnamentPicker value={el.ornament} onPick={(k) => set({ ornament: k })} />}
 
       {el.type === 'image' && (
-        <div className="field">
-          <label>Imagem (logo P&B)</label>
-          <input type="file" accept="image/*" onChange={(e) => onImageFile(el.id, e)} />
-        </div>
+        <>
+          <div className="field">
+            <label>Imagem (logo)</label>
+            <input type="file" accept="image/*" onChange={(e) => onImageFile(el.id, e)} />
+          </div>
+          {el.src && (
+            <>
+              <label className="check"><input type="checkbox" checked={el.bw !== false} onChange={(e) => set({ bw: e.target.checked })} /> Preto e branco (térmica)</label>
+              {el.bw !== false && (
+                <>
+                  <div className="field">
+                    <label>Limiar · {Math.round(el.threshold ?? 128)}</label>
+                    <input type="range" min="20" max="235" step="1" value={el.threshold ?? 128} onChange={(e) => set({ threshold: Number(e.target.value) })} style={{ accentColor: 'var(--accent)' }} />
+                  </div>
+                  <label className="check"><input type="checkbox" checked={!!el.dither} onChange={(e) => set({ dither: e.target.checked })} /> Dithering (meio-tom p/ fotos)</label>
+                </>
+              )}
+            </>
+          )}
+        </>
       )}
 
       <button className="btn danger" style={{ width: '100%', marginTop: 10, justifyContent: 'center' }} onClick={() => onRemove(el.id)}><Trash2 size={15} /> Remover elemento</button>

@@ -49,6 +49,19 @@ export const FONTS = [
 ]
 export const DEFAULT_FONT = FONTS[0].css
 
+// Formatos de código de barras (jsbarcode). Cada um valida a entrada à sua maneira
+// (EAN/UPC exigem dígitos numéricos no tamanho certo).
+export const BARCODE_FORMATS = [
+  { id: 'CODE128', name: 'CODE128 (geral)' },
+  { id: 'EAN13', name: 'EAN-13 (produto)' },
+  { id: 'EAN8', name: 'EAN-8' },
+  { id: 'UPC', name: 'UPC-A' },
+  { id: 'CODE39', name: 'CODE39' },
+  { id: 'ITF', name: 'ITF (intercalado 2/5)' },
+  { id: 'MSI', name: 'MSI' },
+  { id: 'codabar', name: 'Codabar' }
+]
+
 // URL do Google Fonts com todas as famílias usadas.
 export const GOOGLE_FONTS_HREF =
   'https://fonts.googleapis.com/css2?' +
@@ -134,6 +147,47 @@ function contentFor(el) {
 
 // ---- cache de imagens (logos) para render síncrono ----
 const imageCache = new Map()
+const processedCache = new Map()
+
+// Converte a imagem para P&B (1 bit) — limiar simples ou dithering Floyd-Steinberg.
+// Resultado cacheado por src+limiar+dither (no tamanho natural da imagem).
+function processedImage(src, img, threshold, dither) {
+  const th = threshold == null ? 128 : Number(threshold)
+  const key = src + '|' + th + '|' + (dither ? 1 : 0)
+  if (processedCache.has(key)) return processedCache.get(key)
+  const w = img.naturalWidth || img.width || 1
+  const h = img.naturalHeight || img.height || 1
+  const cv = createCanvas(w, h)
+  const c = cv.getContext('2d')
+  c.drawImage(img, 0, 0, w, h)
+  const id = c.getImageData(0, 0, w, h)
+  const d = id.data
+  const gray = new Float32Array(w * h)
+  for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+    const a = d[i + 3] / 255 // transparente vira branco
+    gray[p] = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) * a + 255 * (1 - a)
+  }
+  if (dither) {
+    for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) {
+      const p = yy * w + xx
+      const nv = gray[p] < th ? 0 : 255
+      const err = gray[p] - nv
+      gray[p] = nv
+      if (xx + 1 < w) gray[p + 1] += err * 7 / 16
+      if (yy + 1 < h) {
+        if (xx > 0) gray[p + w - 1] += err * 3 / 16
+        gray[p + w] += err * 5 / 16
+        if (xx + 1 < w) gray[p + w + 1] += err * 1 / 16
+      }
+    }
+  } else {
+    for (let p = 0; p < gray.length; p++) gray[p] = gray[p] < th ? 0 : 255
+  }
+  for (let i = 0, p = 0; i < d.length; i += 4, p++) { const v = gray[p]; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255 }
+  c.putImageData(id, 0, 0)
+  processedCache.set(key, cv)
+  return cv
+}
 
 export async function preloadTemplateImages(template) {
   if (!hasDOM) return
@@ -165,6 +219,9 @@ export function renderTemplateToCanvas(template, pxPerMm = DPMM) {
     const y = (el.y || 0) * pxPerMm
     const w = (el.w || 0) * pxPerMm
     const h = (el.h || 0) * pxPerMm
+    const rot = Number(el.rot) || 0
+    ctx.save()
+    if (rot) { const cx = x + w / 2, cy = y + h / 2; ctx.translate(cx, cy); ctx.rotate(rot * Math.PI / 180); ctx.translate(-cx, -cy) }
     try {
       if (el.type === 'rect') {
         if (el.fill) ctx.fillRect(x, y, w, h)
@@ -177,7 +234,7 @@ export function renderTemplateToCanvas(template, pxPerMm = DPMM) {
       } else if (el.type === 'qr') {
         drawQR(ctx, contentFor(el), x, y, Math.min(w, h))
       } else if (el.type === 'barcode') {
-        drawBarcode(x, y, w, h, contentFor(el), ctx)
+        drawBarcode(x, y, w, h, contentFor(el), ctx, el.barFormat, el.barText)
       } else if (el.type === 'icon') {
         const sz = Math.min(w, h)
         drawLibIcon(ctx, el.iconLib || 'etiqya', el.icon || 'star', x + (w - sz) / 2, y + (h - sz) / 2, sz)
@@ -186,9 +243,12 @@ export function renderTemplateToCanvas(template, pxPerMm = DPMM) {
       } else if (el.type === 'table') {
         drawTable(ctx, el, x, y, w, h, pxPerMm)
       } else if (el.type === 'image' && el.src && imageCache.has(el.src)) {
-        ctx.drawImage(imageCache.get(el.src), x, y, w, h)
+        const img = imageCache.get(el.src)
+        if (el.bw === false) ctx.drawImage(img, x, y, w, h)
+        else ctx.drawImage(processedImage(el.src, img, el.threshold, el.dither), x, y, w, h)
       }
     } catch { /* elemento inválido — ignora */ }
+    ctx.restore()
   }
   return canvas
 }
@@ -253,10 +313,24 @@ function drawQR(ctx, text, x, y, size) {
   }
 }
 
-function drawBarcode(x, y, w, h, text, ctx) {
+function drawBarcode(x, y, w, h, text, ctx, format, showText) {
   const content = String(text ?? '')
   if (!content || w < 4 || h < 4) return
   const off = createCanvas(Math.round(w), Math.round(h))
-  JsBarcode(off, content, { format: 'CODE128', displayValue: false, margin: 0, width: 2, height: Math.round(h) })
-  ctx.drawImage(off, x, y, w, h)
+  try {
+    JsBarcode(off, content, {
+      format: format || 'CODE128', displayValue: !!showText,
+      fontSize: Math.max(8, Math.round(h * 0.2)), textMargin: 1,
+      margin: 0, width: 2, height: Math.round(showText ? h * 0.74 : h)
+    })
+    ctx.drawImage(off, x, y, w, h)
+  } catch {
+    // entrada inválida para o formato escolhido — desenha um aviso discreto
+    ctx.save(); ctx.strokeStyle = '#000'; ctx.fillStyle = '#000'; ctx.lineWidth = 1
+    ctx.strokeRect(x, y, w, h)
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'center'
+    ctx.font = `${Math.max(7, Math.round(h * 0.22))}px sans-serif`
+    ctx.fillText('cód. inválido', x + w / 2, y + h / 2)
+    ctx.restore()
+  }
 }

@@ -5,7 +5,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 const ELABEL = { text: 'Texto', rect: 'Retângulo', line: 'Linha', qr: 'QR', barcode: 'Cód. barras', icon: 'Ícone', ornament: 'Ornamento', image: 'Imagem', date: 'Data', table: 'Tabela' }
 
 // Palco do editor: canvas + alças arrastáveis + guias de alinhamento (snap).
-export default function Stage({ template, scale, selId, onSelect, onChange }) {
+export default function Stage({ template, scale, selId, selIds = [], onSelect, onChange }) {
   const canvasRef = useRef(null)
   const [guides, setGuides] = useState([])
   const { widthMm, heightMm, elements } = template
@@ -42,15 +42,22 @@ export default function Stage({ template, scale, selId, onSelect, onChange }) {
   // Arraste/redimensiona via Pointer Events — mouse, toque e caneta.
   function startDrag(e, el, mode) {
     e.preventDefault(); e.stopPropagation()
-    onSelect(el.id)
+    // Mover um elemento que já faz parte de uma seleção múltipla → arrasta todos juntos.
+    const multi = mode === 'move' && selIds.length > 1 && selIds.includes(el.id)
+    if (!multi) onSelect(el.id)
     try { e.currentTarget.setPointerCapture?.(e.pointerId) } catch { /* ok */ }
     const sx = e.clientX, sy = e.clientY
     const o = { x: el.x, y: el.y, w: el.w, h: el.h }
+    const origins = multi ? selIds.map((id) => elements.find((x) => x.id === id)).filter(Boolean).map((E) => ({ id: E.id, x: E.x, y: E.y, w: E.w, h: E.h })) : null
     const move = (ev) => {
       ev.preventDefault()
       const dx = (ev.clientX - sx) / scale
       const dy = (ev.clientY - sy) / scale
-      if (mode === 'move') {
+      if (mode === 'move' && multi) {
+        for (const g of origins) {
+          onChange(g.id, { x: clamp(g.x + dx, 0, widthMm - g.w), y: clamp(g.y + dy, 0, heightMm - g.h) })
+        }
+      } else if (mode === 'move') {
         let nx = clamp(o.x + dx, 0, widthMm - o.w)
         let ny = clamp(o.y + dy, 0, heightMm - o.h)
         const s = snap(nx, ny, o.w, o.h, el)
@@ -92,12 +99,12 @@ export default function Stage({ template, scale, selId, onSelect, onChange }) {
         {elements.map((el) => (
           <div
             key={el.id}
-            className={`de-handle ${el.id === selId ? 'sel' : ''}`}
-            style={{ left: el.x * scale, top: el.y * scale, width: (el.w || 2) * scale, height: (el.h || 2) * scale, touchAction: 'none' }}
-            onPointerDown={(e) => startDrag(e, el, 'move')}
+            className={`de-handle ${(el.id === selId || selIds.includes(el.id)) ? 'sel' : ''}`}
+            style={{ left: el.x * scale, top: el.y * scale, width: (el.w || 2) * scale, height: (el.h || 2) * scale, touchAction: 'none', transform: el.rot ? `rotate(${el.rot}deg)` : undefined }}
+            onPointerDown={(e) => { if (e.shiftKey) { e.preventDefault(); e.stopPropagation(); onSelect(el.id, true) } else startDrag(e, el, 'move') }}
             title={ELABEL[el.type] || el.type}
           >
-            {el.id === selId && <span className="de-resize" style={{ touchAction: 'none' }} onPointerDown={(e) => startDrag(e, el, 'resize')} />}
+            {el.id === selId && selIds.length <= 1 && <span className="de-resize" style={{ touchAction: 'none' }} onPointerDown={(e) => startDrag(e, el, 'resize')} />}
           </div>
         ))}
       </div>

@@ -41,6 +41,7 @@ export default function App() {
   injectStyles()
   const [template, setTemplate] = useState(() => ({ ...clone(DEFAULT_TEMPLATE), id: null }))
   const [selId, setSelId] = useState(null)
+  const [selIds, setSelIds] = useState([]) // seleção múltipla (inclui selId)
   const [showPrint, setShowPrint] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
   const [showStarters, setShowStarters] = useState(false)
@@ -94,6 +95,7 @@ export default function App() {
     coalesceRef.current = { t: 0, tag: null }
     setTemplate(prev)
     setSelId((id) => (prev.elements.some((e) => e.id === id) ? id : null))
+    setSelIds([])
     setHistTick((n) => n + 1)
   }
   function redo() {
@@ -104,6 +106,7 @@ export default function App() {
     coalesceRef.current = { t: 0, tag: null }
     setTemplate(next)
     setSelId((id) => (next.elements.some((e) => e.id === id) ? id : null))
+    setSelIds([])
     setHistTick((n) => n + 1)
   }
 
@@ -133,19 +136,20 @@ export default function App() {
       if (mod && (e.key === 'd' || e.key === 'D')) { if (selId) { e.preventDefault(); duplicateEl(selId) } return }
       if (mod && (e.key === 'c' || e.key === 'C')) { if (selId) { e.preventDefault(); copyEl(selId) } return }
       if (mod && (e.key === 'v' || e.key === 'V')) { e.preventDefault(); pasteEl(); return }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selId) { e.preventDefault(); removeEl(selId); return }
-      if (selId && e.key.startsWith('Arrow')) {
+      if (mod && (e.key === 'a' || e.key === 'A')) { e.preventDefault(); const all = templateRef.current.elements.map((x) => x.id); setSelIds(all); setSelId(all[all.length - 1] || null); return }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && (selId || selIds.length)) { e.preventDefault(); removeSelected(); return }
+      if ((selId || selIds.length) && e.key.startsWith('Arrow')) {
         e.preventDefault()
         const step = e.shiftKey ? 5 : 1
-        if (e.key === 'ArrowLeft') nudgeEl(selId, -step, 0)
-        else if (e.key === 'ArrowRight') nudgeEl(selId, step, 0)
-        else if (e.key === 'ArrowUp') nudgeEl(selId, 0, -step)
-        else if (e.key === 'ArrowDown') nudgeEl(selId, 0, step)
+        if (e.key === 'ArrowLeft') nudgeSelected(-step, 0)
+        else if (e.key === 'ArrowRight') nudgeSelected(step, 0)
+        else if (e.key === 'ArrowUp') nudgeSelected(0, -step)
+        else if (e.key === 'ArrowDown') nudgeSelected(0, step)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selId, template])
+  }, [selId, selIds, template])
 
   function flash(msg) { setToast(msg); setTimeout(() => setToast(null), 1800) }
 
@@ -160,7 +164,50 @@ export default function App() {
   function removeEl(id) {
     pushHistory()
     setTemplate((t) => ({ ...t, elements: t.elements.filter((e) => e.id !== id) }))
-    setSelId(null)
+    setSelId(null); setSelIds([])
+  }
+  // Seleção (single ou aditiva com Shift). Mantém selId = elemento "primário" (inspetor).
+  function selectEl(id, additive) {
+    if (id == null) { setSelId(null); setSelIds([]); return }
+    if (additive) {
+      setSelIds((prev) => {
+        const has = prev.includes(id)
+        const next = has ? prev.filter((x) => x !== id) : [...prev, id]
+        setSelId(has ? (next[next.length - 1] || null) : id)
+        return next
+      })
+    } else { setSelId(id); setSelIds([id]) }
+  }
+  function removeSelected() {
+    const ids = selIds.length ? selIds : (selId ? [selId] : [])
+    if (!ids.length) return
+    pushHistory()
+    setTemplate((t) => ({ ...t, elements: t.elements.filter((e) => !ids.includes(e.id)) }))
+    setSelId(null); setSelIds([])
+  }
+  // Move todos os selecionados pelas setas (mm), agrupado no histórico.
+  function nudgeSelected(dx, dy) {
+    const ids = selIds.length > 1 ? selIds : (selId ? [selId] : [])
+    if (!ids.length) return
+    pushHistory('nudge')
+    const W = templateRef.current.widthMm, H = templateRef.current.heightMm
+    setTemplate((t) => ({ ...t, elements: t.elements.map((e) => {
+      if (!ids.includes(e.id)) return e
+      return { ...e, x: clamp(Math.round((e.x + dx) * 10) / 10, 0, W - e.w), y: clamp(Math.round((e.y + dy) * 10) / 10, 0, H - e.h) }
+    }) }))
+  }
+  // Alinha TODOS os selecionados na etiqueta (cada um pela própria caixa).
+  function alignSelected(h, v) {
+    const ids = selIds.length ? selIds : (selId ? [selId] : [])
+    if (!ids.length) return
+    pushHistory()
+    const W = templateRef.current.widthMm, H = templateRef.current.heightMm
+    setTemplate((t) => ({ ...t, elements: t.elements.map((e) => {
+      if (!ids.includes(e.id)) return e
+      const x = h === 'left' ? 0 : h === 'right' ? Math.max(0, W - e.w) : (W - e.w) / 2
+      const y = v === 'top' ? 0 : v === 'bottom' ? Math.max(0, H - e.h) : (H - e.h) / 2
+      return { ...e, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 }
+    }) }))
   }
   function duplicateEl(id) {
     const src = templateRef.current.elements.find((e) => e.id === id)
@@ -168,7 +215,7 @@ export default function App() {
     pushHistory()
     const copy = { ...clone(src), id: uid(), x: clamp(src.x + 2, 0, templateRef.current.widthMm - src.w), y: clamp(src.y + 2, 0, templateRef.current.heightMm - src.h) }
     setTemplate((t) => ({ ...t, elements: [...t.elements, copy] }))
-    setSelId(copy.id)
+    setSelId(copy.id); setSelIds([copy.id])
     flash('Elemento duplicado')
   }
   // Copia/cola elementos (mesmo entre etiquetas e sessões, via localStorage).
@@ -187,7 +234,7 @@ export default function App() {
     const t = templateRef.current
     const el = { ...clone(src), id: uid(), x: clamp((src.x || 0) + 2, 0, Math.max(0, t.widthMm - (src.w || 2))), y: clamp((src.y || 0) + 2, 0, Math.max(0, t.heightMm - (src.h || 2))) }
     setTemplate((tt) => ({ ...tt, elements: [...tt.elements, el] }))
-    setSelId(el.id)
+    setSelId(el.id); setSelIds([el.id])
     flash('Elemento colado')
   }
   // Reordena a camada do elemento. dir: 'front' | 'back' | 'up' | 'down'.
@@ -231,16 +278,16 @@ export default function App() {
     let el
     if (type === 'text') el = { ...base, type, text: 'Texto', fontMm: 3, bold: false, align: 'left', font: 'Arial, Helvetica, sans-serif', w: 20, h: 5 }
     else if (type === 'qr') el = { ...base, type, text: 'https://tagya.app', w: 9, h: 9 }
-    else if (type === 'barcode') el = { ...base, type, text: '123456789', w: 28, h: 8 }
+    else if (type === 'barcode') el = { ...base, type, text: '123456789', barFormat: 'CODE128', barText: false, w: 28, h: 8 }
     else if (type === 'icon') el = { ...base, type, iconLib: 'etiqya', icon: 'star', w: 8, h: 8 }
     else if (type === 'date') el = { ...base, type, dateMode: 'today', offsetDays: 0, fixedDate: '', fmt: 'dd/MM/yyyy', prefix: '', fontMm: 3, bold: false, align: 'left', font: 'Arial, Helvetica, sans-serif', w: 28, h: 5 }
     else if (type === 'table') el = { ...base, type, rows: 2, cols: 2, cells: ['', '', '', ''], fontMm: 2.4, lineMm: 0.3, w: 36, h: 14 }
     else if (type === 'rect') el = { ...base, type, w: 20, h: 6, fill: false, lineMm: 0.4 }
     else if (type === 'line') el = { ...base, type, w: 24, h: 1, lineMm: 0.4 }
     else if (type === 'ornament') el = { ...base, type, ornament: 'div-diamond', w: 30, h: 7 }
-    else if (type === 'image') el = { ...base, type, src: null, w: 12, h: 8 }
+    else if (type === 'image') el = { ...base, type, src: null, bw: true, threshold: 128, dither: false, w: 12, h: 8 }
     setTemplate((t) => ({ ...t, elements: [...t.elements, el] }))
-    setSelId(el.id)
+    setSelId(el.id); setSelIds([el.id])
   }
 
   function onImageFile(id, e) {
@@ -261,7 +308,7 @@ export default function App() {
   function newLabel() {
     pushHistory()
     setTemplate({ ...clone(DEFAULT_TEMPLATE), id: null, name: 'Nova etiqueta' })
-    setSelId(null)
+    setSelId(null); setSelIds([])
     flash('Nova etiqueta')
   }
   function doSave() {
@@ -273,14 +320,14 @@ export default function App() {
   function loadTemplate(t) {
     pushHistory()
     setTemplate(clone(t))
-    setSelId(null)
+    setSelId(null); setSelIds([])
     setShowTemplates(false)
     flash('Modelo carregado')
   }
   function loadStarter(t) {
     pushHistory()
     setTemplate({ ...clone(t), id: null })
-    setSelId(null)
+    setSelId(null); setSelIds([])
     setShowStarters(false)
     flash('Modelo aplicado')
   }
@@ -332,8 +379,9 @@ export default function App() {
     </>
   )
 
-  const stage = <Stage template={template} scale={scale} selId={selId} onSelect={setSelId} onChange={updateEl} onBeginChange={() => pushHistory()} />
-  const inspector = <Inspector el={sel} index={template.elements.findIndex((e) => e.id === selId)} count={template.elements.length} onUpdate={editEl} onRemove={removeEl} onImageFile={onImageFile} onDuplicate={duplicateEl} onReorder={reorderEl} onAlign={alignEl} />
+  const stage = <Stage template={template} scale={scale} selId={selId} selIds={selIds} onSelect={selectEl} onChange={updateEl} onBeginChange={() => pushHistory()} />
+  const multiSel = selIds.length > 1 ? { count: selIds.length, onAlign: alignSelected, onRemove: removeSelected } : null
+  const inspector = <Inspector el={sel} multi={multiSel} index={template.elements.findIndex((e) => e.id === selId)} count={template.elements.length} onUpdate={editEl} onRemove={removeEl} onImageFile={onImageFile} onDuplicate={duplicateEl} onReorder={reorderEl} onAlign={alignEl} />
 
   const NAV = [
     { id: 'tools', Icon: Shapes, label: 'Elementos', onClick: () => setMobileTab('tools') },

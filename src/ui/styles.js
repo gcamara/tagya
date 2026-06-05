@@ -119,6 +119,12 @@ body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;backgrou
 .align-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;width:108px}
 .align-cell{position:relative;aspect-ratio:1;border:1px solid var(--line);background:var(--panel);border-radius:7px;cursor:pointer;transition:.15s;padding:0}
 .align-cell:hover{border-color:var(--accent);background:var(--accent-soft)}
+.rot-row{display:flex;align-items:center;gap:5px}
+.rot-row input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.rot-q{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:7px;padding:4px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
+.rot-q:hover{border-color:var(--accent-2)}
+.rot-q.sel{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.app.dark .rot-q{background:#2a2336}
 .align-dot{position:absolute;width:7px;height:7px;border-radius:2px;background:var(--accent);opacity:.55}
 .align-dot.h-left{left:4px}.align-dot.h-center{left:50%;margin-left:-3.5px}.align-dot.h-right{right:4px}
 .align-dot.v-top{top:4px}.align-dot.v-middle{top:50%;margin-top:-3.5px}.align-dot.v-bottom{bottom:4px}

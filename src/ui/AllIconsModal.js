@@ -2,6 +2,23 @@ import { useEffect, useRef, useState } from 'react'
 import { LIBRARIES, getLibrary, drawLibIcon, libIconCount } from '../lib/icons/index.js'
 import { useIconLib } from './useIconLib.js'
 
+// Sinônimos PT→EN (as chaves dos ícones são em inglês). Busca em português passa a achar.
+const SYN = {
+  cachorro: ['dog'], cao: ['dog'], gato: ['cat'], leao: ['lion'], tigre: ['tiger'], girafa: ['giraffe'], crocodilo: ['crocodile'], elefante: ['elephant'], zebra: ['zebra'], cavalo: ['horse'], vaca: ['cow'], porco: ['pig'], ovelha: ['sheep', 'ewe'], cabra: ['goat'], coelho: ['rabbit'], urso: ['bear'], raposa: ['fox'], lobo: ['wolf'], macaco: ['monkey'], gorila: ['gorilla'], panda: ['panda'], canguru: ['kangaroo'], passaro: ['bird'], coruja: ['owl'], aguia: ['eagle'], pinguim: ['penguin'], pato: ['duck'], galinha: ['chicken'], peixe: ['fish'], tubarao: ['shark'], baleia: ['whale'], golfinho: ['dolphin'], polvo: ['octopus'], caranguejo: ['crab'], cobra: ['snake'], tartaruga: ['turtle'], sapo: ['frog'], dragao: ['dragon'], aranha: ['spider'], abelha: ['bee', 'honeybee'], borboleta: ['butterfly'], formiga: ['ant'], caracol: ['snail'],
+  moto: ['motorbike', 'moped', 'scooter'], carro: ['car'], caminhao: ['truck'], onibus: ['bus'], bicicleta: ['bicycle', 'bike'], aviao: ['plane', 'airplane'], barco: ['boat', 'ship'], foguete: ['rocket'], combustivel: ['fuel'], capacete: ['helmet'],
+  casa: ['home', 'house'], cama: ['bed'], cadeira: ['chair'], mesa: ['table'], sofa: ['sofa', 'couch'], porta: ['door'], janela: ['window'], chave: ['key'], lampada: ['lamp', 'bulb', 'light'], geladeira: ['fridge'], fogao: ['stove'], microondas: ['microwave'], banheiro: ['toilet', 'bath'], chuveiro: ['shower'], escada: ['stairs', 'ladder'], ventilador: ['fan'], televisao: ['television'], espelho: ['mirror'], vassoura: ['broom'], lixo: ['trash'], planta: ['plant', 'flower', 'leaf'], cortina: ['curtain'],
+  martelo: ['hammer'], serra: ['saw'], chavedefenda: ['screwdriver'], parafuso: ['screw'], prego: ['nail'], alicate: ['pliers'], furadeira: ['drill'], regua: ['ruler', 'tape-measure'], pincel: ['brush'], tinta: ['paint'], ferramenta: ['tool'], machado: ['axe'],
+  coracao: ['heart'], estrela: ['star'], relogio: ['clock'], calendario: ['calendar'], camera: ['camera'], telefone: ['phone'], musica: ['music'], presente: ['gift'], dinheiro: ['money', 'cash', 'coin', 'dollar'], carrinho: ['cart'], etiqueta: ['tag'], caixa: ['box'], cafe: ['coffee'], comida: ['food'], bebida: ['drink', 'bottle'], bolo: ['cake'], maca: ['apple'], pao: ['bread'], cerveja: ['beer'], vinho: ['wine'], sol: ['sun'], lua: ['moon'], nuvem: ['cloud'], chuva: ['rain'], fogo: ['fire', 'flame'], arvore: ['tree'], flor: ['flower'], folha: ['leaf'], aviso: ['warning', 'alert'], cadeado: ['lock'], usuario: ['user'], pessoas: ['users', 'people'], olho: ['eye'], busca: ['search'], seta: ['arrow'], wifi: ['wifi'], bateria: ['battery'], raio: ['bolt', 'flash'], escudo: ['shield'], coroa: ['crown'], bandeira: ['flag'], trofeu: ['trophy'], medalha: ['medal']
+}
+const stripAccents = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '')
+// Expande a busca: o termo + sinônimos de qualquer chave PT que contenha o termo.
+function searchTerms(query) {
+  const q = stripAccents(query)
+  const terms = new Set([q])
+  for (const k in SYN) if (k.includes(q)) SYN[k].forEach((t) => terms.add(t))
+  return [...terms]
+}
+
 function Preview({ libId, icon }) {
   const ref = useRef(null)
   const ready = useIconLib(libId)
@@ -37,12 +54,15 @@ export default function AllIconsModal({ open, libId, value, onPick, onClose }) {
   const query = q.trim().toLowerCase()
   const searching = query.length > 0
 
-  // Resultados globais (todas as libs) quando há busca.
+  // Resultados globais (todas as libs) quando há busca, com sinônimos PT→EN.
+  const terms = searching ? searchTerms(query) : []
   const globalResults = searching
     ? LIBRARIES.map((l) => {
       const keys = []
-      l.categories.forEach((c) => c.keys.forEach((k) => { if (k.includes(query) && !keys.includes(k)) keys.push(k) }))
-      return { id: l.id, name: l.name, keys: keys.slice(0, 120) }
+      l.categories.forEach((c) => c.keys.forEach((k) => {
+        if (!keys.includes(k) && terms.some((t) => k.includes(t))) keys.push(k)
+      }))
+      return { id: l.id, name: l.name, keys: keys.slice(0, 160) }
     }).filter((l) => l.keys.length)
     : []
 
@@ -61,7 +81,7 @@ export default function AllIconsModal({ open, libId, value, onPick, onClose }) {
           type="text"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar em todas as bibliotecas… (ex: car, star, heart)"
+          placeholder="Buscar em todas as bibliotecas… (ex: moto, cachorro, girafa, casa)"
         />
 
         {!searching && (
