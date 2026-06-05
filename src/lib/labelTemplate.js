@@ -33,6 +33,7 @@ export const FONTS = [
   { id: 'archivoblack', name: 'Archivo Black', fam: 'Archivo Black', g: 'Archivo+Black', css: '"Archivo Black", sans-serif' },
   { id: 'kanit', name: 'Kanit', fam: 'Kanit', g: 'Kanit:wght@400;700', css: '"Kanit", sans-serif' },
   { id: 'fredoka', name: 'Fredoka', fam: 'Fredoka', g: 'Fredoka:wght@400;600', css: '"Fredoka", sans-serif' },
+  { id: 'baloo', name: 'Baloo 2', fam: 'Baloo 2', g: 'Baloo+2:wght@400;700;800', css: '"Baloo 2", sans-serif' },
   { id: 'quicksand', name: 'Quicksand', fam: 'Quicksand', g: 'Quicksand:wght@400;700', css: '"Quicksand", sans-serif' },
   { id: 'righteous', name: 'Righteous', fam: 'Righteous', g: 'Righteous', css: '"Righteous", cursive' },
   { id: 'playfair', name: 'Playfair Display', fam: 'Playfair Display', g: 'Playfair+Display:wght@400;700', css: '"Playfair Display", serif' },

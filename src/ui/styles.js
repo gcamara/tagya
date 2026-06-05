@@ -4,7 +4,7 @@ import { GOOGLE_FONTS_HREF } from '../lib/labelTemplate.js'
 export const CSS = `
 :root{
   --bg:#f6f5fb; --panel:#ffffff; --ink:#221b2e; --muted:#6b6477;
-  --line:#e6e2ef; --accent:#7c4dff; --accent-2:#b388ff; --accent-soft:#efe9ff;
+  --line:#e6e2ef; --accent:#7c5cff; --accent-2:#b388ff; --accent-soft:#efe9ff; --coral:#ff6b6b;
   --ok:#2e9e6b; --danger:#e0443e; --shadow:0 8px 30px rgba(60,40,90,.10);
 }
 *{box-sizing:border-box}
@@ -16,6 +16,7 @@ body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;backgrou
 .brand{display:flex;align-items:center;gap:10px}
 .brand .logo{width:36px;height:36px;border-radius:10px;background:#fff;display:grid;place-items:center;color:#7c4dff;font-weight:800;font-size:15px;letter-spacing:-.5px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
 .brand h1{font-size:19px;margin:0;font-weight:800;letter-spacing:.3px}
+.brand h1 .ya{color:#ff8a8a}
 .brand small{display:block;font-size:11px;opacity:.85;font-weight:500;margin-top:-2px}
 .topbar .spacer{flex:1}
 .tb-actions{display:flex;gap:8px;flex-wrap:wrap}

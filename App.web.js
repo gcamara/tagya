@@ -13,6 +13,7 @@ import StarterModal from './src/ui/StarterModal.js'
 import BridgePicker from './src/ui/BridgePicker.js'
 import ConnectionBar from './src/ui/ConnectionBar.js'
 import BatchModal from './src/ui/BatchModal.js'
+import BrandIcon from './src/ui/BrandIcon.js'
 import {
   Plus, Shapes, SlidersHorizontal, Save, Printer, MoreHorizontal,
   Type, QrCode, Barcode, Star, Square, Minus, ImageIcon,
@@ -395,9 +396,9 @@ export default function App() {
     <div className={`app ${dark ? 'dark' : ''} ${isMobile ? 'is-mobile' : ''}`}>
       <header className="topbar">
         <div className="brand">
-          <div className="logo">Ya</div>
+          <div className="logo"><BrandIcon size={26} /></div>
           <div>
-            <h1>TagYa</h1>
+            <h1>Tag<span className="ya">Ya</span></h1>
             <small>editor de etiquetas · Niimbot</small>
           </div>
         </div>
