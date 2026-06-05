@@ -16,6 +16,22 @@ import gameCats from './gameCats.js'
 import animalsCats from './animalsCats.js'
 import homeCats from './homeCats.js'
 
+// Dados de desenho: importados ESTATICAMENTE para o build web virar um único
+// arquivo auto-contido (sem chunks async carregados por URL). Isso permite
+// embarcar o editor offline no app nativo (WebView source={{ html }}).
+import { LUCIDE_NODES } from './lucideData.js'
+import { TABLER_NODES } from './tablerData.js'
+import { MDI_PATHS } from './mdiData.js'
+import { FA_ICONS } from './faData.js'
+import { BS_ICONS, BS_VB } from './bootstrapData.js'
+import { PH_ICONS, PH_VB } from './phosphorData.js'
+import { REMIX_ICONS, REMIX_VB } from './remixData.js'
+import { HERO_ICONS, HERO_VB } from './heroData.js'
+import { BRANDS_ICONS, BRANDS_VB } from './brandsData.js'
+import { GAME_ICONS, GAME_VB } from './gameData.js'
+import { ANIMALS_ICONS, ANIMALS_VB } from './animalsData.js'
+import { HOME_ICONS, HOME_VB } from './homeData.js'
+
 const N = (v) => parseFloat(v) || 0
 const has2D = () => typeof Path2D !== 'undefined'
 
@@ -83,20 +99,20 @@ function faPaths(icons) { // key -> {w,h,p}; viewBox w×h centralizado
   }
 }
 
-// ---- loaders (import dinâmico → fábrica de desenho) ----
+// ---- loaders (dados já no bundle → fábrica de desenho, resolvida na hora) ----
 const LOADERS = {
-  lucide: () => import('./lucideData.js').then((m) => strokeNodes(m.LUCIDE_NODES)),
-  tabler: () => import('./tablerData.js').then((m) => strokeNodes(m.TABLER_NODES)),
-  mdi: () => import('./mdiData.js').then((m) => singlePaths(m.MDI_PATHS)),
-  fa: () => import('./faData.js').then((m) => faPaths(m.FA_ICONS)),
-  bootstrap: () => import('./bootstrapData.js').then((m) => fillPaths(m.BS_ICONS, m.BS_VB)),
-  phosphor: () => import('./phosphorData.js').then((m) => fillPaths(m.PH_ICONS, m.PH_VB)),
-  remix: () => import('./remixData.js').then((m) => fillPaths(m.REMIX_ICONS, m.REMIX_VB)),
-  hero: () => import('./heroData.js').then((m) => fillPaths(m.HERO_ICONS, m.HERO_VB)),
-  brands: () => import('./brandsData.js').then((m) => fillPaths(m.BRANDS_ICONS, m.BRANDS_VB)),
-  game: () => import('./gameData.js').then((m) => fillPaths(m.GAME_ICONS, m.GAME_VB)),
-  animals: () => import('./animalsData.js').then((m) => fillPaths(m.ANIMALS_ICONS, m.ANIMALS_VB)),
-  home: () => import('./homeData.js').then((m) => fillPaths(m.HOME_ICONS, m.HOME_VB))
+  lucide: () => Promise.resolve(strokeNodes(LUCIDE_NODES)),
+  tabler: () => Promise.resolve(strokeNodes(TABLER_NODES)),
+  mdi: () => Promise.resolve(singlePaths(MDI_PATHS)),
+  fa: () => Promise.resolve(faPaths(FA_ICONS)),
+  bootstrap: () => Promise.resolve(fillPaths(BS_ICONS, BS_VB)),
+  phosphor: () => Promise.resolve(fillPaths(PH_ICONS, PH_VB)),
+  remix: () => Promise.resolve(fillPaths(REMIX_ICONS, REMIX_VB)),
+  hero: () => Promise.resolve(fillPaths(HERO_ICONS, HERO_VB)),
+  brands: () => Promise.resolve(fillPaths(BRANDS_ICONS, BRANDS_VB)),
+  game: () => Promise.resolve(fillPaths(GAME_ICONS, GAME_VB)),
+  animals: () => Promise.resolve(fillPaths(ANIMALS_ICONS, ANIMALS_VB)),
+  home: () => Promise.resolve(fillPaths(HOME_ICONS, HOME_VB))
 }
 
 const DRAW = { etiqya: (c, k, x, y, s) => drawEtiqya(c, k, x, y, s) }

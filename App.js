@@ -7,13 +7,15 @@ import { ActivityIndicator, Image, Linking, PermissionsAndroid, Platform, Status
 import { WebView } from 'react-native-webview';
 import { BleManager, ScanMode } from 'react-native-ble-plx';
 import * as Updates from 'expo-updates';
+// Editor inlinado (HTML auto-contido). O app NÃO depende mais de GitHub Pages/Netlify:
+// o editor viaja dentro do bundle JS e é atualizado por EAS Update (OTA). Regenerar com
+// `npm run embed:editor` sempre que o editor (App.web.js / src) mudar.
+import EDITOR_HTML from './App.editorHtml';
 
-const EDITOR_URL = 'https://tagya.netlify.app';
 const BRAND_DARK = '#16131e';
-// Cache-bust por inicialização: o WKWebView preserva o NSURLCache entre updates do
-// TestFlight e pode servir um index.html velho. Um parâmetro único por launch força
-// o WebView a buscar o HTML novo (o JS é hasheado, então continua cacheado por URL).
-const EDITOR_URL_FRESH = EDITOR_URL + '?cb=' + Date.now();
+// Origin estável para o WebView (source.html). Dá ao editor um localStorage persistente
+// e isolado (templates salvos, histórico de impressão) que sobrevive entre launches/OTAs.
+const EDITOR_BASE_URL = 'https://app.tagya.local/';
 
 // Serviço GATT das impressoras Niimbot (mesmo que a niimbluelib usa no Web Bluetooth).
 // Usado para destacar/priorizar a impressora na lista de dispositivos.
@@ -207,7 +209,7 @@ export default function App() {
       <StatusBar barStyle="light-content" backgroundColor={BRAND_DARK} />
       <WebView
         ref={webRef}
-        source={{ uri: EDITOR_URL_FRESH }}
+        source={{ html: EDITOR_HTML, baseUrl: EDITOR_BASE_URL }}
         originWhitelist={['*']}
         javaScriptEnabled
         domStorageEnabled
