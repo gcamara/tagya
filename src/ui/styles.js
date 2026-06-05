@@ -12,7 +12,7 @@ html,body,#root{height:100%}
 body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink)}
 .app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
 
-.topbar{display:flex;align-items:center;gap:14px;padding:10px 18px;background:linear-gradient(95deg,#7c4dff,#b388ff);color:#fff;box-shadow:var(--shadow);z-index:10}
+.topbar{display:flex;align-items:center;gap:14px;padding:calc(10px + env(safe-area-inset-top)) 18px 10px;background:linear-gradient(95deg,#7c4dff,#b388ff);color:#fff;box-shadow:var(--shadow);z-index:10}
 .brand{display:flex;align-items:center;gap:10px}
 .brand .logo{width:36px;height:36px;border-radius:10px;background:#fff;display:grid;place-items:center;color:#7c4dff;font-weight:800;font-size:15px;letter-spacing:-.5px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
 .brand h1{font-size:19px;margin:0;font-weight:800;letter-spacing:.3px}
@@ -188,14 +188,14 @@ body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;backgrou
   html,body,#root{height:auto;min-height:100%;overflow:visible}
 }
 .app.is-mobile{height:auto;min-height:100vh;overflow:visible;display:block}
-.app.is-mobile .topbar{position:sticky;top:0;z-index:20;padding:9px 12px;gap:10px}
+.app.is-mobile .topbar{position:sticky;top:0;z-index:20;padding:calc(9px + env(safe-area-inset-top)) 12px 9px;gap:10px}
 .app.is-mobile .brand small{display:none}
 .app.is-mobile .name-input{margin-left:0;flex:1 1 80px;min-width:70px;width:auto}
 .tb-mobile-hist{display:flex;gap:5px;flex-shrink:0}
 .tb-mobile-hist .btn.icon-only{width:34px;padding:7px}
 
 .mbody{padding-bottom:84px}
-.m-stage{position:sticky;top:54px;z-index:9;background:
+.m-stage{position:sticky;top:calc(54px + env(safe-area-inset-top));z-index:9;background:
   radial-gradient(circle at 20% 10%,#efeaff 0,transparent 45%),
   radial-gradient(circle at 90% 90%,#e9f7f1 0,transparent 50%),var(--bg);
   border-bottom:1px solid var(--line)}
