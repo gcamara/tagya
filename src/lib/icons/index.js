@@ -12,6 +12,8 @@ import phosphorCats from './phosphorCats.js'
 import remixCats from './remixCats.js'
 import heroCats from './heroCats.js'
 import brandsCats from './brandsCats.js'
+import gameCats from './gameCats.js'
+import animalsCats from './animalsCats.js'
 
 const N = (v) => parseFloat(v) || 0
 const has2D = () => typeof Path2D !== 'undefined'
@@ -90,7 +92,9 @@ const LOADERS = {
   phosphor: () => import('./phosphorData.js').then((m) => fillPaths(m.PH_ICONS, m.PH_VB)),
   remix: () => import('./remixData.js').then((m) => fillPaths(m.REMIX_ICONS, m.REMIX_VB)),
   hero: () => import('./heroData.js').then((m) => fillPaths(m.HERO_ICONS, m.HERO_VB)),
-  brands: () => import('./brandsData.js').then((m) => fillPaths(m.BRANDS_ICONS, m.BRANDS_VB))
+  brands: () => import('./brandsData.js').then((m) => fillPaths(m.BRANDS_ICONS, m.BRANDS_VB)),
+  game: () => import('./gameData.js').then((m) => fillPaths(m.GAME_ICONS, m.GAME_VB)),
+  animals: () => import('./animalsData.js').then((m) => fillPaths(m.ANIMALS_ICONS, m.ANIMALS_VB))
 }
 
 const DRAW = { etiqya: (c, k, x, y, s) => drawEtiqya(c, k, x, y, s) }
@@ -123,6 +127,7 @@ export function drawLibIcon(ctx, libId, key, x, y, size) {
 
 export const LIBRARIES = [
   { id: 'etiqya', name: 'Etiqya', categories: ETIQYA_CATS },
+  { id: 'animals', name: 'Animais', categories: animalsCats },
   { id: 'lucide', name: 'Lucide', categories: lucideCats },
   { id: 'tabler', name: 'Tabler', categories: tablerCats },
   { id: 'mdi', name: 'Material', categories: mdiCats },
@@ -131,7 +136,8 @@ export const LIBRARIES = [
   { id: 'phosphor', name: 'Phosphor', categories: phosphorCats },
   { id: 'remix', name: 'Remix', categories: remixCats },
   { id: 'hero', name: 'Heroicons', categories: heroCats },
-  { id: 'brands', name: 'Marcas', categories: brandsCats }
+  { id: 'brands', name: 'Marcas', categories: brandsCats },
+  { id: 'game', name: 'Silhuetas', categories: gameCats }
 ]
 
 const LIB_MAP = Object.fromEntries(LIBRARIES.map((l) => [l.id, l]))
