@@ -314,6 +314,24 @@ html.tagya-dark,body.tagya-dark{background:#16131e;color:#F3F1F8}
    abre espaço para a navbar flutuante não cobrir a peça. */
 .app.is-mobile .stage-host{display:flex;flex-direction:column;height:100%}
 .m-stage .stage-wrap{padding:18px 14px calc(98px + env(safe-area-inset-bottom));min-height:0}
+/* editando: a nav some e o painel encaixa embaixo; o canvas não precisa do espaço da nav */
+.mbody.editing .stage-wrap{padding-bottom:14px}
+
+/* Painel de edição ENCAIXADO (mobile): empurra o canvas para cima em vez de cobri-lo,
+   para a etiqueta ficar visível enquanto se edita. Abre ao tocar num elemento. */
+.m-editor{flex:0 0 auto;height:46vh;display:flex;flex-direction:column;background:var(--panel);
+  border-top:1px solid var(--line);border-radius:18px 18px 0 0;box-shadow:0 -8px 28px rgba(60,40,90,.18);z-index:12}
+.m-editor-head{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+  padding:11px 16px 9px;border-bottom:1px solid var(--line)}
+.m-editor-title{font-weight:800;font-size:15px;color:var(--ink)}
+.m-editor-close{width:34px;height:34px;border:none;background:var(--accent-soft);color:var(--accent);
+  border-radius:50%;display:grid;place-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.m-editor-close:active{filter:brightness(.94)}
+.m-editor-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:12px 16px calc(16px + env(safe-area-inset-bottom))}
+.m-editor-body .inspector{border:none;padding:0;background:transparent;overflow:visible;max-height:none}
+.app.dark .m-editor{background:var(--panel);border-color:var(--line)}
+.app.dark .m-editor-title{color:var(--ink)}
 
 @media (max-width:860px){
   .add-grid{grid-template-columns:repeat(4,1fr)}

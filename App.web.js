@@ -9,7 +9,6 @@ import Stage from './src/ui/Stage.js'
 import Inspector from './src/ui/Inspector.js'
 import FloatingToolbar from './src/ui/FloatingToolbar.js'
 import InlineTextEditor from './src/ui/InlineTextEditor.js'
-import InspectorSheet from './src/ui/InspectorSheet.js'
 import PrintModal from './src/ui/PrintModal.js'
 import TemplatesModal from './src/ui/TemplatesModal.js'
 import StarterModal from './src/ui/StarterModal.js'
@@ -22,7 +21,7 @@ import {
   Plus, SlidersHorizontal, Save, Printer, MoreHorizontal,
   Type, QrCode, Barcode, Star, Square, Minus, ImageIcon,
   FilePlus2, Sparkles, FolderOpen, Download, Moon, Sun,
-  Undo2, Redo2, Calendar, Table, Rows, Settings
+  Undo2, Redo2, Calendar, Table, Rows, Settings, ChevronDown
 } from './src/ui/icons.js'
 
 const uid = () => 'el_' + Math.random().toString(36).slice(2, 8)
@@ -47,6 +46,9 @@ const ADD_GROUPS = [
     { type: 'line', Icon: Minus, label: 'Linha' }
   ] }
 ]
+
+// Rótulo legível por tipo de elemento (cabeçalho do painel de edição no mobile).
+const EL_LABEL = { text: 'Texto', date: 'Data', qr: 'QR Code', barcode: 'Código de barras', icon: 'Ícone', ornament: 'Ornamento', image: 'Imagem', table: 'Tabela', rect: 'Retângulo', line: 'Linha' }
 
 export default function App() {
   injectStyles()
@@ -486,10 +488,12 @@ export default function App() {
     </>
   )
 
-  // No mobile, selecionar um elemento mostra a barra flutuante sobre ele (o canvas é o
-  // protagonista). O painel completo (Editar) abre só sob demanda, pela nav inferior.
+  // No mobile, tocar num elemento já abre o painel de edição dele (reconhece o tipo via
+  // Inspector). O painel encaixa embaixo e empurra o canvas para cima — a etiqueta fica
+  // visível enquanto edita. Tocar no vazio (id null) fecha o painel.
   function selectFromStage(id, additive) {
     selectEl(id, additive)
+    if (isMobile) setMobileTab(id != null ? 'editar' : 'none')
   }
   const stage = <Stage template={template} scale={scale} zoom={zoom} onZoom={setZoom} selId={selId} selIds={selIds} onSelect={selectFromStage} onChange={updateEl} onBeginChange={() => pushHistory()} />
   const multiSel = selIds.length > 1 ? { count: selIds.length, onAlign: alignSelected, onRemove: removeSelected, onDistribute: distributeSelected } : null
@@ -523,7 +527,7 @@ export default function App() {
           onCancel={() => setEditId(null)}
         />
       )}
-      {isMobile && (
+      {isMobile && !sheetOpen && (
         <div className="zoomctl">
           <button className="zc-btn" onClick={() => setZoom((z) => clamp(+(z - 0.2).toFixed(2), 0.5, 4))} aria-label="Diminuir zoom"><Minus size={16} /></button>
           <button className="zc-fit" onClick={() => setZoom(1)} title="Ajustar à tela">{Math.round(zoom * 100)}%</button>
@@ -593,15 +597,21 @@ export default function App() {
           {inspector}
         </div>
       ) : (
-        <div className="mbody">
+        <div className={`mbody${sheetOpen ? ' editing' : ''}`}>
           <div className="m-stage">{stageHost}</div>
-          <InspectorSheet open={sheetOpen} onClose={() => setMobileTab('none')}>
-            {inspector}
-          </InspectorSheet>
+          {sheetOpen && (
+            <div className="m-editor">
+              <div className="m-editor-head">
+                <span className="m-editor-title">{multiSel ? `${selIds.length} elementos` : (EL_LABEL[sel && sel.type] || 'Editar')}</span>
+                <button className="m-editor-close" onClick={() => selectEl(null)} aria-label="Fechar edição"><ChevronDown size={20} /></button>
+              </div>
+              <div className="m-editor-body">{inspector}</div>
+            </div>
+          )}
         </div>
       )}
 
-      {isMobile && (
+      {isMobile && !sheetOpen && (
         <nav className="mobile-nav">
           {NAV.map((n) => {
             const active = (n.id === 'add' && showAdd) || (n.id === 'editar' && mobileTab === 'editar')
