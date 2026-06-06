@@ -505,7 +505,55 @@ html.tagya-dark,body.tagya-dark{background:#16131e;color:#F3F1F8}
 .isheet-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
   padding:2px 16px calc(18px + env(safe-area-inset-bottom));touch-action:auto}
 .isheet-body .inspector{border:none;padding:0;background:transparent;overflow:visible;max-height:none}
-.app.dark .isheet{background:var(--panel);border-color:var(--line)}`
+.app.dark .isheet{background:var(--panel);border-color:var(--line)}
+
+/* ---- Painel de edição encaixado: grip de redimensionar + ações no cabeçalho ---- */
+.m-editor{animation:editorUp .2s ease-out}
+@keyframes editorUp{from{transform:translateY(24px);opacity:.5}to{transform:translateY(0);opacity:1}}
+.m-editor-grip{flex-shrink:0;display:grid;place-items:center;padding:8px 0 2px;cursor:grab;touch-action:none}
+.m-editor-grip:active{cursor:grabbing}
+.m-editor-grip span{width:44px;height:5px;border-radius:3px;background:var(--line);display:block}
+.m-editor-acts{display:flex;align-items:center;gap:6px}
+.m-editor-acts .iact{flex:0 0 auto;width:36px;height:36px;border-radius:10px}
+.m-editor-acts .iact.danger{color:#e0567a;border-color:transparent}
+.m-editor-acts .iact.danger:hover:not(:disabled){background:rgba(224,86,122,.12);border-color:#e0567a;color:#e0567a}
+.app.dark .m-editor-acts .iact.danger{color:#ff8aa6}
+
+/* ---- Ajuste fino (d-pad de nudge) na aba Posição ---- */
+.nudge-pad{display:grid;grid-template-areas:". u ." "l . r" ". d .";gap:6px;width:max-content}
+.nudge-pad .nbtn{width:42px;height:36px;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+  border-radius:10px;font-size:18px;line-height:1;cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent}
+.nudge-pad .nbtn:active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.nudge-pad .nb-u{grid-area:u}.nudge-pad .nb-l{grid-area:l}.nudge-pad .nb-r{grid-area:r}.nudge-pad .nb-d{grid-area:d}
+.app.dark .nudge-pad .nbtn{background:#2a2336}
+
+/* ---- Lista de camadas (sheet) ---- */
+.layers-list{max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px}
+.layer-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:12px;
+  background:var(--panel);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.layer-row.sel{border-color:var(--accent);background:var(--accent-soft)}
+.layer-ico{width:30px;height:30px;flex-shrink:0;border-radius:8px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.layer-lbl{flex:1;min-width:0;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.layer-sub{color:var(--muted);font-weight:400}
+.layer-z{display:flex;gap:4px;flex-shrink:0}
+.layer-z .iact{flex:0 0 auto;width:32px;height:32px}
+.app.dark .layer-row{background:#2a2336}
+
+/* ---- Prévia em tamanho real (PrintModal) ---- */
+.rsp-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;margin-bottom:14px;
+  background:repeating-conic-gradient(#eceaf2 0% 25%,#f6f5fa 0% 50%) 50% / 16px 16px;border-radius:12px;border:1px solid var(--line)}
+.rsp-canvas{background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18);image-rendering:auto;max-width:100%}
+.rsp-cap{font-size:11px;color:var(--muted);font-weight:600}
+.app.dark .rsp-wrap{background:repeating-conic-gradient(#241d2e 0% 25%,#1c1726 0% 50%) 50% / 16px 16px;border-color:var(--line)}
+
+/* ---- Seleção mais visível + alça de toque maior (mobile) ---- */
+.de-handle.sel{border:1.5px solid var(--accent);background:rgba(124,77,255,.08);box-shadow:0 0 0 2px rgba(124,77,255,.25)}
+.app.is-mobile .de-resize{right:-12px;bottom:-12px;width:26px;height:26px}
+
+/* ---- Canvas: matte mais limpo + pan ao ampliar (scroll seguro nas bordas) ---- */
+.m-stage{background:#f3f1f8}
+.app.dark .m-stage{background:#16131e}
+.m-stage .stage-wrap{background:none;touch-action:pan-x pan-y;justify-content:safe center;align-items:safe center}`
 
 export function injectStyles() {
   if (typeof document === 'undefined') return

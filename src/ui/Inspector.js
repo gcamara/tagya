@@ -55,9 +55,17 @@ const ALIGN_TITLE = {
 }
 
 // Painel de propriedades do elemento selecionado — seções viram abas (estilo Canva).
-export default function Inspector({ el, multi, index = -1, count = 0, onUpdate, onRemove, onImageFile, onDuplicate, onReorder, onAlign }) {
+export default function Inspector({ el, multi, index = -1, count = 0, onUpdate, onRemove, onImageFile, onDuplicate, onReorder, onAlign, embedded = false, autoFocusId, onAutoFocused }) {
   const [tab, setTab] = useState(0)
+  const txtRef = useRef(null)
   useEffect(() => { setTab(0) }, [el && el.id, el && el.type]) // volta à 1ª aba ao trocar de elemento
+  // Auto-foca o campo de texto quando o elemento foi recém-criado (sobe o teclado pronto).
+  useEffect(() => {
+    if (autoFocusId && el && el.id === autoFocusId && el.type === 'text' && txtRef.current) {
+      txtRef.current.focus()
+      onAutoFocused && onAutoFocused()
+    }
+  }, [autoFocusId, el && el.id])
 
   if (multi) {
     return (
@@ -86,7 +94,7 @@ export default function Inspector({ el, multi, index = -1, count = 0, onUpdate, 
             </div>
           </div>
         )}
-        <button className="btn danger" style={{ width: '100%', marginTop: 6, justifyContent: 'center' }} onClick={multi.onRemove}><Trash2 size={15} /> Remover {multi.count} elementos</button>
+        {!embedded && <button className="btn danger" style={{ width: '100%', marginTop: 6, justifyContent: 'center' }} onClick={multi.onRemove}><Trash2 size={15} /> Remover {multi.count} elementos</button>}
       </div>
     )
   }
@@ -111,6 +119,15 @@ export default function Inspector({ el, multi, index = -1, count = 0, onUpdate, 
           <input type="number" title="Y" value={round(el.y)} onChange={(e) => set({ y: Number(e.target.value) })} />
           <input type="number" title="Largura" value={round(el.w)} onChange={(e) => set({ w: Number(e.target.value) })} />
           <input type="number" title="Altura" value={round(el.h)} onChange={(e) => set({ h: Number(e.target.value) })} />
+        </div>
+      </div>
+      <div className="field">
+        <label>Ajuste fino (0,5 mm)</label>
+        <div className="nudge-pad">
+          <button className="nbtn nb-u" title="Cima" onClick={() => set({ y: round((el.y || 0) - 0.5) })}>↑</button>
+          <button className="nbtn nb-l" title="Esquerda" onClick={() => set({ x: round((el.x || 0) - 0.5) })}>←</button>
+          <button className="nbtn nb-r" title="Direita" onClick={() => set({ x: round((el.x || 0) + 0.5) })}>→</button>
+          <button className="nbtn nb-d" title="Baixo" onClick={() => set({ y: round((el.y || 0) + 0.5) })}>↓</button>
         </div>
       </div>
       {onAlign && (
@@ -168,7 +185,7 @@ export default function Inspector({ el, multi, index = -1, count = 0, onUpdate, 
   const sections = []
   if (el.type === 'text') {
     sections.push({ id: 'txt', label: 'Texto', node: (
-      <div className="field"><label>Texto</label><textarea value={el.text} onChange={(e) => set({ text: e.target.value })} /></div>
+      <div className="field"><label>Texto</label><textarea ref={txtRef} value={el.text} onChange={(e) => set({ text: e.target.value })} /></div>
     ) })
     sections.push({ id: 'fnt', label: 'Fonte', node: fontNode })
   } else if (el.type === 'date') {
@@ -255,12 +272,14 @@ export default function Inspector({ el, multi, index = -1, count = 0, onUpdate, 
 
   return (
     <div className="inspector">
-      <div className="ins-head">
-        <h3 style={{ margin: 0 }}>{ELABEL[el.type] || el.type}</h3>
-        <span className="tag">{el.type}</span>
-      </div>
+      {!embedded && (
+        <div className="ins-head">
+          <h3 style={{ margin: 0 }}>{ELABEL[el.type] || el.type}</h3>
+          <span className="tag">{el.type}</span>
+        </div>
+      )}
 
-      {(onDuplicate || onReorder) && (
+      {!embedded && (onDuplicate || onReorder) && (
         <div className="ins-actions">
           {onDuplicate && (
             <button className="iact" title="Duplicar (Ctrl+D)" onClick={() => onDuplicate(el.id)}><Copy size={16} /></button>
@@ -286,7 +305,7 @@ export default function Inspector({ el, multi, index = -1, count = 0, onUpdate, 
 
       <div className="ins-pane">{sections[cur].node}</div>
 
-      <button className="btn danger" style={{ width: '100%', marginTop: 12, justifyContent: 'center' }} onClick={() => onRemove(el.id)}><Trash2 size={15} /> Remover elemento</button>
+      {!embedded && <button className="btn danger" style={{ width: '100%', marginTop: 12, justifyContent: 'center' }} onClick={() => onRemove(el.id)}><Trash2 size={15} /> Remover elemento</button>}
     </div>
   )
 }

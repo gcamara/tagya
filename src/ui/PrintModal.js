@@ -1,9 +1,33 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { printTemplateNiimbot, printTestNiimbot, bluetoothSupported, subscribeConnection } from '../lib/niimbot.js'
+import { renderTemplateToCanvas, preloadTemplateImages } from '../lib/labelTemplate.js'
 import { savePrintRecord, listPrintRecords, clearPrintRecords } from '../lib/storage.js'
 
 function whenStr(iso) {
   try { const d = new Date(iso); return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) } catch { return '' }
+}
+
+// Prévia da etiqueta no tamanho físico aproximado (96dpi → 1mm ≈ 3.78px CSS).
+function RealSizePreview({ template }) {
+  const ref = useRef(null)
+  useEffect(() => {
+    let alive = true
+    preloadTemplateImages(template).then(() => {
+      if (!alive || !ref.current) return
+      const c = renderTemplateToCanvas(template, 8)
+      const dst = ref.current
+      dst.width = c.width; dst.height = c.height
+      dst.getContext('2d').drawImage(c, 0, 0)
+    })
+    return () => { alive = false }
+  }, [template])
+  const PX = 96 / 25.4
+  return (
+    <div className="rsp-wrap">
+      <canvas ref={ref} className="rsp-canvas" style={{ width: template.widthMm * PX, height: template.heightMm * PX, borderRadius: template.shape === 'round' ? '50%' : 4 }} />
+      <span className="rsp-cap">tamanho real aprox. · {template.widthMm}×{template.heightMm} mm</span>
+    </div>
+  )
 }
 
 // Modal de impressão: Bluetooth direto quando disponível.
@@ -49,6 +73,8 @@ export default function PrintModal({ open, onClose, template }) {
           <h3>🖨 Imprimir</h3>
           <button className="btn icon" onClick={onClose}>×</button>
         </div>
+
+        <RealSizePreview template={template} />
 
         {/* Bluetooth direto */}
         <div className="print-card">

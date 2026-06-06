@@ -21,7 +21,8 @@ import {
   Plus, SlidersHorizontal, Save, Printer, MoreHorizontal,
   Type, QrCode, Barcode, Star, Square, Minus, ImageIcon,
   FilePlus2, Sparkles, FolderOpen, Download, Moon, Sun,
-  Undo2, Redo2, Calendar, Table, Rows, Settings, ChevronDown
+  Undo2, Redo2, Calendar, Table, Rows, Settings, ChevronDown, ChevronUp,
+  Copy, BringToFront, Trash2, Layers
 } from './src/ui/icons.js'
 
 const uid = () => 'el_' + Math.random().toString(36).slice(2, 8)
@@ -49,6 +50,9 @@ const ADD_GROUPS = [
 
 // Rótulo legível por tipo de elemento (cabeçalho do painel de edição no mobile).
 const EL_LABEL = { text: 'Texto', date: 'Data', qr: 'QR Code', barcode: 'Código de barras', icon: 'Ícone', ornament: 'Ornamento', image: 'Imagem', table: 'Tabela', rect: 'Retângulo', line: 'Linha' }
+// Ícone por tipo (lista de camadas).
+const TYPE_ICON = { text: Type, date: Calendar, qr: QrCode, barcode: Barcode, icon: Star, ornament: Sparkles, image: ImageIcon, table: Table, rect: Square, line: Minus }
+const EDITOR_SNAPS = [0.4, 0.58, 0.72] // frações da altura p/ o painel encaixado (mantém canvas visível)
 
 export default function App() {
   injectStyles()
@@ -67,6 +71,10 @@ export default function App() {
   const [mobileTab, setMobileTab] = useState('none') // none | editar (folha do inspetor no mobile)
   const [showActions, setShowActions] = useState(false)
   const [showAdd, setShowAdd] = useState(false) // bandeja "Elementos" (mobile)
+  const [showLayers, setShowLayers] = useState(false) // lista de camadas (mobile)
+  const [editorH, setEditorH] = useState(null) // altura px do painel encaixado (null = padrão)
+  const [focusTextId, setFocusTextId] = useState(null) // id de texto recém-criado p/ auto-focar
+  const [vh, setVh] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 800))
   const isMobile = vw < 860
 
   const [zoom, setZoom] = useState(1)
@@ -221,10 +229,40 @@ export default function App() {
   }, [dark])
 
   useEffect(() => {
-    const on = () => setVw(window.innerWidth)
+    const on = () => { setVw(window.innerWidth); setVh(window.innerHeight) }
     window.addEventListener('resize', on)
     return () => window.removeEventListener('resize', on)
   }, [])
+
+  // Painel de edição encaixado (mobile): arrastar o grip redimensiona; soltar encaixa
+  // no snap mais próximo; arrastar bem para baixo fecha (desseleciona).
+  const editDrag = useRef(null)
+  const editorHeight = editorH != null ? editorH : Math.round(EDITOR_SNAPS[1] * vh)
+  function onEditGripDown(e) {
+    e.preventDefault()
+    try { e.currentTarget.setPointerCapture?.(e.pointerId) } catch { /* ok */ }
+    editDrag.current = { startY: e.clientY, startH: editorHeight }
+  }
+  function onEditGripMove(e) {
+    if (!editDrag.current) return
+    e.preventDefault()
+    const dy = e.clientY - editDrag.current.startY
+    const h = clamp(editDrag.current.startH - dy, 110, Math.round(vh * 0.74))
+    editDrag.current.curH = h
+    setEditorH(h)
+  }
+  function onEditGripUp() {
+    if (!editDrag.current) return
+    const h = editDrag.current.curH != null ? editDrag.current.curH : editorHeight
+    editDrag.current = null
+    if (h < vh * 0.2) { selectEl(null); return }
+    const snaps = EDITOR_SNAPS.map((f) => f * vh)
+    let best = snaps[0], bd = Infinity
+    snaps.forEach((s) => { const d = Math.abs(s - h); if (d < bd) { bd = d; best = s } })
+    setEditorH(Math.round(best))
+  }
+  // Ao fechar o painel (sem seleção), volta a altura ao padrão.
+  useEffect(() => { if (selId == null && selIds.length <= 1) setEditorH(null) }, [selId, selIds.length])
 
   function toggleDark() {
     setDark((d) => { const v = !d; savePrefs({ ...loadPrefs(), dark: v }); return v })
@@ -411,6 +449,7 @@ export default function App() {
     else if (type === 'image') el = { ...base, type, src: null, bw: true, threshold: 128, dither: false, w: 12, h: 8 }
     setTemplate((t) => ({ ...t, elements: [...t.elements, el] }))
     setSelId(el.id); setSelIds([el.id])
+    if (type === 'text') setFocusTextId(el.id) // auto-foca o campo de texto ao adicionar
   }
 
   function onImageFile(id, e, field = 'src') {
@@ -497,7 +536,7 @@ export default function App() {
   }
   const stage = <Stage template={template} scale={scale} zoom={zoom} onZoom={setZoom} selId={selId} selIds={selIds} onSelect={selectFromStage} onChange={updateEl} onBeginChange={() => pushHistory()} />
   const multiSel = selIds.length > 1 ? { count: selIds.length, onAlign: alignSelected, onRemove: removeSelected, onDistribute: distributeSelected } : null
-  const inspector = <Inspector el={sel} multi={multiSel} index={template.elements.findIndex((e) => e.id === selId)} count={template.elements.length} onUpdate={editEl} onRemove={removeEl} onImageFile={onImageFile} onDuplicate={duplicateEl} onReorder={reorderEl} onAlign={alignEl} />
+  const inspector = <Inspector el={sel} multi={multiSel} index={template.elements.findIndex((e) => e.id === selId)} count={template.elements.length} onUpdate={editEl} onRemove={removeEl} onImageFile={onImageFile} onDuplicate={duplicateEl} onReorder={reorderEl} onAlign={alignEl} embedded={isMobile} autoFocusId={focusTextId} onAutoFocused={() => setFocusTextId(null)} />
 
   // Stage + camada de overlays (barra de contexto e edição inline) ancorados nele.
   // Mostra a barra só com 1 selecionado, sem arraste, fora da edição inline e sem a
@@ -558,13 +597,15 @@ export default function App() {
             <small>editor de etiquetas · Niimbot</small>
           </div>
         </div>
-        <input
-          type="text"
-          className="name-input"
-          value={template.name || ''}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Nome da etiqueta"
-        />
+        {!isMobile && (
+          <input
+            type="text"
+            className="name-input"
+            value={template.name || ''}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Nome da etiqueta"
+          />
+        )}
         <div className="spacer" />
         {isMobile && (
           <div className="tb-mobile-hist">
@@ -600,10 +641,16 @@ export default function App() {
         <div className={`mbody${sheetOpen ? ' editing' : ''}`}>
           <div className="m-stage">{stageHost}</div>
           {sheetOpen && (
-            <div className="m-editor">
+            <div className="m-editor" style={{ height: editorHeight }}>
+              <div className="m-editor-grip" onPointerDown={onEditGripDown} onPointerMove={onEditGripMove} onPointerUp={onEditGripUp} onPointerCancel={onEditGripUp}><span /></div>
               <div className="m-editor-head">
                 <span className="m-editor-title">{multiSel ? `${selIds.length} elementos` : (EL_LABEL[sel && sel.type] || 'Editar')}</span>
-                <button className="m-editor-close" onClick={() => selectEl(null)} aria-label="Fechar edição"><ChevronDown size={20} /></button>
+                <div className="m-editor-acts">
+                  {!multiSel && <button className="iact" title="Duplicar" onClick={() => duplicateEl(selId)}><Copy size={16} /></button>}
+                  {!multiSel && <button className="iact" title="Trazer para frente" onClick={() => reorderEl(selId, 'front')}><BringToFront size={16} /></button>}
+                  <button className="iact danger" title="Excluir" onClick={() => (multiSel ? removeSelected() : removeEl(selId))}><Trash2 size={16} /></button>
+                  <button className="m-editor-close" onClick={() => selectEl(null)} aria-label="Fechar edição"><ChevronDown size={18} /></button>
+                </div>
               </div>
               <div className="m-editor-body">{inspector}</div>
             </div>
@@ -634,6 +681,36 @@ export default function App() {
         </div>
       )}
 
+      {isMobile && showLayers && (
+        <div className="overlay overlay-sheet" onClick={() => setShowLayers(false)}>
+          <div className="sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-grip" />
+            <h3>Camadas <span className="count-pill">{template.elements.length}</span></h3>
+            {template.elements.length === 0
+              ? <p className="hint" style={{ margin: 0 }}>Nenhum elemento ainda. Toque em "Elementos" para adicionar.</p>
+              : (
+                <div className="layers-list">
+                  {[...template.elements].reverse().map((el) => {
+                    const idx = template.elements.findIndex((e) => e.id === el.id)
+                    const Ico = TYPE_ICON[el.type] || Square
+                    const extra = (el.type === 'text' || el.type === 'qr' || el.type === 'barcode') && el.text ? el.text : ''
+                    return (
+                      <div key={el.id} className={`layer-row ${el.id === selId ? 'sel' : ''}`} onClick={() => { selectEl(el.id); setMobileTab('editar'); setShowLayers(false) }}>
+                        <span className="layer-ico"><Ico size={16} /></span>
+                        <span className="layer-lbl"><b>{EL_LABEL[el.type] || el.type}</b>{extra ? <span className="layer-sub"> · {extra}</span> : null}</span>
+                        <span className="layer-z">
+                          <button className="iact" title="Avançar" disabled={idx >= template.elements.length - 1} onClick={(e) => { e.stopPropagation(); reorderEl(el.id, 'up') }}><ChevronUp size={15} /></button>
+                          <button className="iact" title="Recuar" disabled={idx <= 0} onClick={(e) => { e.stopPropagation(); reorderEl(el.id, 'down') }}><ChevronDown size={15} /></button>
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+          </div>
+        </div>
+      )}
+
       {isMobile && showActions && (
         <div className="overlay overlay-sheet" onClick={() => setShowActions(false)}>
           <div className="sheet" onClick={(e) => e.stopPropagation()}>
@@ -644,6 +721,7 @@ export default function App() {
               <button className="btn" onClick={() => { setShowStarters(true); setShowActions(false) }}><Sparkles size={17} /> Prontos</button>
               <button className="btn" onClick={() => { setShowTemplates(true); setShowActions(false) }}><FolderOpen size={17} /> Meus</button>
               <button className="btn" onClick={() => { setShowBatch(true); setShowActions(false) }}><Rows size={17} /> Lote</button>
+              <button className="btn" onClick={() => { setShowLayers(true); setShowActions(false) }}><Layers size={17} /> Camadas</button>
               <button className="btn" onClick={() => { doExport(); setShowActions(false) }}><Download size={17} /> PNG</button>
               <button className="btn" onClick={() => { setShowSettings(true); setShowActions(false) }}><Settings size={17} /> Configurações</button>
             </div>
