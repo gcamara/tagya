@@ -6,6 +6,11 @@
 
 import { renderTemplateToCanvas, preloadTemplateImages, createCanvas, DPMM } from './labelTemplate.js'
 import { bridgeAvailable, createBridgeClient } from './niimbotBridge.js'
+// IMPORTA ESTÁTICO (não `import()` dinâmico): o app nativo carrega o editor de um
+// HTML embarcado offline (baseUrl app.tagya.local, sem servidor), então um chunk
+// async de niimbluelib NÃO seria buscável → o connect travava em "Conectando…"
+// pra sempre. Estático faz a lib entrar no chunk principal (inlinado por embed-editor).
+import * as niimblue from '@mmote/niimbluelib'
 
 export function bluetoothSupported() {
   return bridgeAvailable() || (typeof navigator !== 'undefined' && !!navigator.bluetooth)
@@ -32,7 +37,7 @@ export function makeTestCanvas(widthMm, heightMm) {
 async function connectClient(printTask, onStatus) {
   if (!bluetoothSupported()) throw new Error('Bluetooth não disponível neste ambiente (use Chrome/Edge no desktop, Chrome no Android, ou o app TagYa).')
   onStatus('Carregando driver…')
-  const lib = await import('@mmote/niimbluelib')
+  const lib = niimblue
   const useBridge = bridgeAvailable()
   const client = useBridge ? createBridgeClient(lib) : new lib.NiimbotBluetoothClient()
   onStatus(useBridge ? 'Procurando impressoras Niimbot…' : 'Selecione a impressora Niimbot…')
